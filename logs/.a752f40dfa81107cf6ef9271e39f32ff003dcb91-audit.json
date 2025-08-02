@@ -1,0 +1,15 @@
+{
+    "keep": {
+        "days": true,
+        "amount": 14
+    },
+    "auditLog": "C:\\Users\\orhak\\Desktop\\PetApp\\Hayotush\\backend\\logs\\.a752f40dfa81107cf6ef9271e39f32ff003dcb91-audit.json",
+    "files": [
+        {
+            "date": 1754150050853,
+            "name": "C:\\Users\\orhak\\Desktop\\PetApp\\Hayotush\\backend\\logs\\2025-08-02-error.log",
+            "hash": "aac171385e0fd40ec3c4e515cb650684451a13e5fcad94e77e49a8904ba56413"
+        }
+    ],
+    "hashType": "sha256"
+}

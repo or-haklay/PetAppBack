@@ -1,0 +1,44 @@
+@URL = http://localhost:3000/api/users
+@tokenN = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2ODhlNDFjMDY3YjA1Y2Q4MTk1ODRkYmMiLCJpc0FkbWluIjpmYWxzZSwiaXNHb2xkIjpmYWxzZSwibmFtZSI6IkpvaG4gRG9lIiwiZW1haWwiOiJqb2YzMkBleGFtcGxlLmNvbSIsImlhdCI6MTc1NDE1NTExNX0.iekU_-Ew34nmF1MTB03H8wq023uU8yuCwkis0S0I7Sk
+@tokenA = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2ODhlNDUyODY2YzRlMjM2YzNmZDhjNWYiLCJpc0FkbWluIjp0cnVlLCJpc0dvbGQiOnRydWUsIm5hbWUiOiJPciBIYWtsYXkiLCJlbWFpbCI6Im9yLmhha2xheUBnbWFpbC5jb20iLCJpYXQiOjE3NTQxNTUxNDh9.zjLbr3w8v7M58zc2QVMdHxooYbnTIwDX2_FcAyyhj7A
+
+### Get all users
+GET {{URL}}
+x-auth-token: {{tokenA}}
+
+### Get all users with pagination and sorting
+GET {{URL}}?limit=2&sort=name
+
+### Get user by ID
+GET {{URL}}/688e3f8bb8a7763eecec98d5
+
+### Create a new user
+POST {{URL}}
+Content-Type: application/json
+
+{
+  "name": "Or Haklay",
+  "email": "or.haklay@gmail.com",
+  "password": "Password123"
+}
+### login user
+POST {{URL}}/login
+Content-Type: application/json
+
+{
+  "email": "or.haklay@gmail.com",
+  "password": "Password123"
+}
+
+### Update user by ID
+PUT {{URL}}/688e41c067b05cd819584dbc
+Content-Type: application/json
+x-auth-token: {{tokenN}}
+
+{
+  "name": "John Doe Updated"
+}
+
+### Delete user by ID
+DELETE {{URL}}/688e41c067b05cd819584dbc
+x-auth-token: {{tokenN}}

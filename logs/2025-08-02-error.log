@@ -1,0 +1,42 @@
+2025-08-02T16:05:35.252Z | ERROR | Status: 500, Message: User.findById is not a function, URL: /api/users/12d45d78d123d56d89123d56, Method: GET
+2025-08-02T16:05:58.019Z | ERROR | Status: 500, Message: User.findById is not a function, URL: /api/users/12d45d78d123d56d89123d56, Method: GET
+2025-08-02T16:05:59.298Z | ERROR | Status: 500, Message: User.findById is not a function, URL: /api/users/12d45d78d123d56d89123d56, Method: GET
+2025-08-02T16:07:14.677Z | ERROR | Status: 500, Message: _id is not defined, URL: /api/users/12d45d78d123d56d89123d56, Method: GET
+2025-08-02T16:08:20.994Z | ERROR | Status: 500, Message: User.findOne is not a function, URL: /api/users/12d45d78d123d56d89123d56, Method: GET
+2025-08-02T16:08:50.992Z | ERROR | Status: 500, Message: User.findOne is not a function, URL: /api/users/12d45d78d123d56d89123d56, Method: GET
+2025-08-02T16:08:51.763Z | ERROR | Status: 500, Message: User.findOne is not a function, URL: /api/users/12d45d78d123d56d89123d56, Method: GET
+2025-08-02T16:08:52.650Z | ERROR | Status: 500, Message: User.findOne is not a function, URL: /api/users/12d45d78d123d56d89123d56, Method: GET
+2025-08-02T16:20:57.125Z | ERROR | Status: 500, Message: Converting circular structure to JSON
+    --> starting at object with constructor 'MongoClient'
+    |     property 's' -> object with constructor 'Object'
+    |     property 'sessionPool' -> object with constructor 'ServerSessionPool'
+    --- property 'client' closes the circle, URL: /api/users/12d45d78d123d56d89123d56, Method: GET
+2025-08-02T16:21:23.584Z | ERROR | Status: 500, Message: Converting circular structure to JSON
+    --> starting at object with constructor 'MongoClient'
+    |     property 's' -> object with constructor 'Object'
+    |     property 'sessionPool' -> object with constructor 'ServerSessionPool'
+    --- property 'client' closes the circle, URL: /api/users/12d45d78d123d56d89123d56, Method: GET
+2025-08-02T16:22:54.506Z | ERROR | Status: 500, Message: Converting circular structure to JSON
+    --> starting at object with constructor 'MongoClient'
+    |     property 's' -> object with constructor 'Object'
+    |     property 'sessionPool' -> object with constructor 'ServerSessionPool'
+    --- property 'client' closes the circle, URL: /api/users/12d45d78d123d56d89123d56, Method: GET
+2025-08-02T16:23:47.964Z | ERROR | Status: 404, Message: User not found, URL: /api/users/12d45d78d123d56d89123d56, Method: GET
+2025-08-02T16:35:36.083Z | ERROR | Status: 500, Message: bcrypt is not defined, URL: /api/users, Method: POST
+2025-08-02T16:36:00.592Z | ERROR | Status: 500, Message: bcrypt is not defined, URL: /api/users, Method: POST
+2025-08-02T16:36:39.264Z | ERROR | Status: 500, Message: bcrypt is not defined, URL: /api/users, Method: POST
+2025-08-02T16:36:40.094Z | ERROR | Status: 500, Message: bcrypt is not defined, URL: /api/users, Method: POST
+2025-08-02T16:37:09.806Z | ERROR | Status: 500, Message: bcrypt is not defined, URL: /api/users, Method: POST
+2025-08-02T16:48:33.835Z | ERROR | Status: 400, Message: Invalid User ID format, URL: /api/users/&limit=1, Method: GET
+2025-08-02T16:49:37.665Z | ERROR | Status: 400, Message: Limit must be a number, URL: /api/users?limit=a, Method: GET
+2025-08-02T17:00:03.905Z | ERROR | Status: 401, Message: Invalid email or password, URL: /api/users/login, Method: POST
+2025-08-02T17:28:20.219Z | ERROR | Status: 401, Message: Access denied. No token provided., URL: /api/users, Method: GET
+2025-08-02T17:28:30.729Z | ERROR | Status: 403, Message: Unauthorized access, URL: /api/users, Method: GET
+2025-08-02T17:29:08.922Z | ERROR | Status: 401, Message: Access denied. No token provided., URL: /api/users, Method: GET
+2025-08-02T17:34:35.386Z | ERROR | Status: 401, Message: Access denied. No token provided., URL: /api/users/1, Method: PUT
+2025-08-02T17:34:46.471Z | ERROR | Status: 403, Message: Unauthorized access, URL: /api/users/1, Method: PUT
+2025-08-02T17:34:52.668Z | ERROR | Status: 500, Message: Database error occurred while updating user, URL: /api/users/1, Method: PUT
+2025-08-02T17:35:01.770Z | ERROR | Status: 500, Message: Database error occurred while updating user, URL: /api/users/1, Method: PUT
+2025-08-02T17:36:10.007Z | ERROR | Status: 403, Message: Unauthorized access, URL: /api/users/688e41c067b05cd819584dbc, Method: PUT
+2025-08-02T17:36:25.890Z | ERROR | Status: 401, Message: Access denied. No token provided., URL: /api/users/688e41c067b05cd819584dbc, Method: DELETE
+2025-08-02T17:36:30.594Z | ERROR | Status: 403, Message: Unauthorized access, URL: /api/users/688e41c067b05cd819584dbc, Method: DELETE

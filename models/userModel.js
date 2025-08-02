@@ -1,5 +1,6 @@
 const mongoose = require("mongoose");
 const Joi = require("joi");
+const bcrypt = require("bcrypt");
 
 const userSchema = new mongoose.Schema({
   name: { type: String, required: true },
@@ -38,7 +39,7 @@ userSchema.pre("save", async function (next) {
   next();
 });
 
-const User = mongoose.model("User", userSchema);
+const User = mongoose.model("User", userSchema, "users");
 
 const addressSchema = Joi.object({
   street: Joi.string().required(),
@@ -75,4 +76,4 @@ const loginSchema = Joi.object({
   password: Joi.string().required(),
 });
 
-module.exports = { User, userValidationSchema, loginSchema };
+module.exports = { User, registerSchema, loginSchema, updateProfileSchema };
