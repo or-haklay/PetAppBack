@@ -61,3 +61,68 @@
 2025-08-02T23:25:45.189Z | ERROR | Status: 500, Message: An error occurred while updating the expense., URL: /api/pets/expenses/688e8f29aaa30d4fded15a80/688e9a5e6d0c9ed0e484d396, Method: PUT
 2025-08-02T23:25:45.703Z | ERROR | Status: 500, Message: An error occurred while updating the expense., URL: /api/pets/expenses/688e8f29aaa30d4fded15a80/688e9a5e6d0c9ed0e484d396, Method: PUT
 2025-08-02T23:28:46.348Z | ERROR | Status: 404, Message: Expense not found, URL: /api/pets/expenses/688e8f29aaa30d4fded15a80/688e9a5e6d0c9ed0e484d396, Method: DELETE
+2025-08-03T14:25:02.547Z | ERROR | Status: 400, Message: Category must be one of: Vet, Food, Grooming, Toys, Insurance, Other, URL: /api/pets/expenses/688e8f29aaa30d4fded15a80/688e9d8cd9f7e2770a20ecc1, Method: PUT
+2025-08-03T14:39:42.639Z | ERROR | Status: 400, Message: Amount is required, URL: /api/pets/expenses/688e8f29aaa30d4fded15a80, Method: POST
+2025-08-03T14:40:00.538Z | ERROR | Status: 400, Message: Reminder date must be in the future, URL: /api/pets/reminders/688e8f29aaa30d4fded15a80, Method: POST
+2025-08-03T14:56:46.839Z | ERROR | Status: 400, Message: Invalid reminder data, URL: /api/pets/reminders/688e8f29aaa30d4fded15a80/688f74c97245daedda584438, Method: PUT
+2025-08-03T14:57:21.973Z | ERROR | Status: 400, Message: Invalid reminder data, URL: /api/pets/reminders/688e8f29aaa30d4fded15a80/688f74c97245daedda584438, Method: PUT
+2025-08-03T14:57:22.821Z | ERROR | Status: 400, Message: Invalid reminder data, URL: /api/pets/reminders/688e8f29aaa30d4fded15a80/688f74c97245daedda584438, Method: PUT
+2025-08-03T14:57:28.648Z | ERROR | Status: 400, Message: Invalid reminder data, URL: /api/pets/reminders/688e8f29aaa30d4fded15a80/688f74c97245daedda584438, Method: PUT
+2025-08-03T14:57:29.302Z | ERROR | Status: 400, Message: Invalid reminder data, URL: /api/pets/reminders/688e8f29aaa30d4fded15a80/688f74c97245daedda584438, Method: PUT
+2025-08-03T14:57:29.953Z | ERROR | Status: 400, Message: Invalid reminder data, URL: /api/pets/reminders/688e8f29aaa30d4fded15a80/688f74c97245daedda584438, Method: PUT
+2025-08-03T14:57:35.729Z | ERROR | Status: 400, Message: ValidationError: "isCompleted" is not allowed, URL: /api/pets/reminders/688e8f29aaa30d4fded15a80/688f74c97245daedda584438, Method: PUT
+2025-08-03T14:58:27.154Z | ERROR | Status: 400, Message: ValidationError: "isCompleted" is not allowed, URL: /api/pets/reminders/688e8f29aaa30d4fded15a80/688f74c97245daedda584438, Method: PUT
+2025-08-03T14:58:27.986Z | ERROR | Status: 400, Message: ValidationError: "isCompleted" is not allowed, URL: /api/pets/reminders/688e8f29aaa30d4fded15a80/688f74c97245daedda584438, Method: PUT
+2025-08-03T14:59:59.365Z | ERROR | Status: 400, Message: validation failed, URL: /api/pets/reminders/688e8f29aaa30d4fded15a80/688f74c97245daedda584438, Method: PUT
+2025-08-03T15:00:08.283Z | ERROR | Status: 400, Message: validation failed: "_id" is not allowed, URL: /api/pets/reminders/688e8f29aaa30d4fded15a80/688f74c97245daedda584438, Method: PUT
+2025-08-03T15:11:51.863Z | ERROR | Status: 404, Message: Pet not found., URL: /api/pets/reminders/688e8f29aaa30d4fded15a80, Method: GET
+2025-08-03T15:11:54.382Z | ERROR | Status: 404, Message: Pet not found., URL: /api/pets/reminders/688e8f29aaa30d4fded15a80, Method: GET
+2025-08-03T15:12:16.487Z | ERROR | Status: 404, Message: Pet not found., URL: /api/pets/reminders/688e8f29aaa30d4fded15a80, Method: GET
+2025-08-03T15:12:17.062Z | ERROR | Status: 404, Message: Pet not found., URL: /api/pets/reminders/688e8f29aaa30d4fded15a80, Method: GET
+2025-08-03T15:12:17.637Z | ERROR | Status: 404, Message: Pet not found., URL: /api/pets/reminders/688e8f29aaa30d4fded15a80, Method: GET
+2025-08-03T15:12:25.639Z | ERROR | Status: 404, Message: Pet not found., URL: /api/pets/reminders/688e8f29aaa30d4fded15a80, Method: GET
+2025-08-03T15:12:26.684Z | ERROR | Status: 404, Message: Pet not found., URL: /api/pets/reminders/688e8f29aaa30d4fded15a80, Method: GET
+2025-08-03T15:13:08.158Z | ERROR | Status: 404, Message: Pet not found., URL: /api/pets/reminders/688e8f29aaa30d4fded15a80, Method: GET
+2025-08-03T15:13:35.377Z | ERROR | Status: 404, Message: Pet not found., URL: /api/pets/reminders/688e8f29aaa30d4fded15a80, Method: GET
+2025-08-03T15:14:12.288Z | ERROR | Status: 404, Message: Pet not found., URL: /api/pets/reminders/688e8f29aaa30d4fded15a80, Method: GET
+2025-08-03T15:14:13.078Z | ERROR | Status: 404, Message: Pet not found., URL: /api/pets/reminders/688e8f29aaa30d4fded15a80, Method: GET
+2025-08-03T15:14:13.948Z | ERROR | Status: 404, Message: Pet not found., URL: /api/pets/reminders/688e8f29aaa30d4fded15a80, Method: GET
+2025-08-03T15:15:23.586Z | ERROR | Status: 404, Message: Pet not found., URL: /api/pets/reminders/688e8f0baaa30d4fded15a7a, Method: GET
+2025-08-03T15:15:24.398Z | ERROR | Status: 404, Message: Pet not found., URL: /api/pets/reminders/688e8f0baaa30d4fded15a7a, Method: GET
+2025-08-03T15:15:24.862Z | ERROR | Status: 404, Message: Pet not found., URL: /api/pets/reminders/688e8f0baaa30d4fded15a7a, Method: GET
+2025-08-03T15:15:42.907Z | ERROR | Status: 404, Message: Pet not found., URL: /api/pets/reminders/688e8f0baaa30d4fded15a7a, Method: GET
+2025-08-03T15:15:43.654Z | ERROR | Status: 404, Message: Pet not found., URL: /api/pets/reminders/688e8f0baaa30d4fded15a7a, Method: GET
+2025-08-03T15:15:43.958Z | ERROR | Status: 404, Message: Pet not found., URL: /api/pets/reminders/688e8f0baaa30d4fded15a7a, Method: GET
+2025-08-03T15:15:44.118Z | ERROR | Status: 404, Message: Pet not found., URL: /api/pets/reminders/688e8f0baaa30d4fded15a7a, Method: GET
+2025-08-03T15:16:04.106Z | ERROR | Status: 404, Message: Pet not found., URL: /api/pets/reminders/688e8f0baaa30d4fded15a7a, Method: GET
+2025-08-03T15:16:26.720Z | ERROR | Status: 404, Message: Pet not found., URL: /api/pets/reminders/688e8f0baaa30d4fded15a7a, Method: GET
+2025-08-03T15:16:42.558Z | ERROR | Status: 404, Message: Pet not found., URL: /api/pets/reminders/688e8f0baaa30d4fded15a7a, Method: GET
+2025-08-03T15:16:47.248Z | ERROR | Status: 404, Message: Pet not found., URL: /api/pets/reminders/688e8f0baaa30d4fded15a7a, Method: GET
+2025-08-03T15:16:47.875Z | ERROR | Status: 404, Message: Pet not found., URL: /api/pets/reminders/688e8f0baaa30d4fded15a7a, Method: GET
+2025-08-03T15:17:02.184Z | ERROR | Status: 404, Message: Pet not found., URL: /api/pets/reminders/688e8f0baaa30d4fded15a7a, Method: GET
+2025-08-03T15:17:02.967Z | ERROR | Status: 404, Message: Pet not found., URL: /api/pets/reminders/688e8f0baaa30d4fded15a7a, Method: GET
+2025-08-03T15:17:03.514Z | ERROR | Status: 404, Message: Pet not found., URL: /api/pets/reminders/688e8f0baaa30d4fded15a7a, Method: GET
+2025-08-03T15:17:04.327Z | ERROR | Status: 404, Message: Pet not found., URL: /api/pets/reminders/688e8f0baaa30d4fded15a7a, Method: GET
+2025-08-03T15:17:15.342Z | ERROR | Status: 404, Message: Pet not found., URL: /api/pets/reminders/688e8f0baaa30d4fded15a7a, Method: GET
+2025-08-03T15:17:16.157Z | ERROR | Status: 404, Message: Pet not found., URL: /api/pets/reminders/688e8f0baaa30d4fded15a7a, Method: GET
+2025-08-03T15:17:16.653Z | ERROR | Status: 404, Message: Pet not found., URL: /api/pets/reminders/688e8f0baaa30d4fded15a7a, Method: GET
+2025-08-03T15:19:06.054Z | ERROR | Status: 404, Message: Pet not found., URL: /api/pets/reminders/688e8f0baaa30d4fded15a7a?limit=1&sort=date, Method: GET
+2025-08-03T15:19:06.791Z | ERROR | Status: 404, Message: Pet not found., URL: /api/pets/reminders/688e8f0baaa30d4fded15a7a?limit=1&sort=date, Method: GET
+2025-08-03T15:19:11.964Z | ERROR | Status: 404, Message: Pet not found., URL: /api/pets/reminders/688e8f0baaa30d4fded15a7a?limit=1&sort=date, Method: GET
+2025-08-03T15:19:18.055Z | ERROR | Status: 404, Message: Pet not found., URL: /api/pets/reminders/688e8f0baaa30d4fded15a7a?limit=1&sort=date, Method: GET
+2025-08-03T15:24:29.259Z | ERROR | Status: 500, Message: An error occurred while updating the reminder., URL: /api/pets/reminders/688e8f29aaa30d4fded15a80/688f74c97245daedda584438, Method: PUT
+2025-08-03T15:24:34.133Z | ERROR | Status: 500, Message: An error occurred while updating the reminder., URL: /api/pets/reminders/688e8f29aaa30d4fded15a80/688f74c97245daedda584438, Method: PUT
+2025-08-03T15:24:42.603Z | ERROR | Status: 500, Message: An error occurred while updating the reminder., URL: /api/pets/reminders/688e8f29aaa30d4fded15a80/688f74c97245daedda584438, Method: PUT
+2025-08-03T15:24:43.220Z | ERROR | Status: 500, Message: An error occurred while updating the reminder., URL: /api/pets/reminders/688e8f29aaa30d4fded15a80/688f74c97245daedda584438, Method: PUT
+2025-08-03T15:24:43.743Z | ERROR | Status: 500, Message: An error occurred while updating the reminder., URL: /api/pets/reminders/688e8f29aaa30d4fded15a80/688f74c97245daedda584438, Method: PUT
+2025-08-03T15:30:18.176Z | ERROR | Status: 404, Message: Pet not found., URL: /api/pets/expenses/688e8f29aaa30d4fded15a80, Method: GET
+2025-08-03T15:30:21.248Z | ERROR | Status: 404, Message: Pet not found., URL: /api/pets/expenses/688e8f29aaa30d4fded15a80?sort=date&limit=3, Method: GET
+2025-08-03T15:30:32.765Z | ERROR | Status: 404, Message: Pet not found., URL: /api/pets/expenses/688e8f29aaa30d4fded15a80, Method: GET
+2025-08-03T15:30:33.597Z | ERROR | Status: 404, Message: Pet not found., URL: /api/pets/expenses/688e8f29aaa30d4fded15a80, Method: GET
+2025-08-03T15:30:35.838Z | ERROR | Status: 404, Message: Pet not found., URL: /api/pets/expenses/688e8f29aaa30d4fded15a80?sort=date&limit=3, Method: GET
+2025-08-03T15:30:36.522Z | ERROR | Status: 404, Message: Pet not found., URL: /api/pets/expenses/688e8f29aaa30d4fded15a80?sort=date&limit=3, Method: GET
+2025-08-03T15:30:38.223Z | ERROR | Status: 404, Message: Pet not found., URL: /api/pets/expenses/688e8f29aaa30d4fded15a80, Method: POST
+2025-08-03T15:30:39.732Z | ERROR | Status: 404, Message: Pet not found., URL: /api/pets/expenses/688e8f29aaa30d4fded15a80, Method: POST
+2025-08-03T15:31:06.760Z | ERROR | Status: 404, Message: Pet not found., URL: /api/pets/expenses/688e8f29aaa30d4fded15a80, Method: GET
+2025-08-03T15:31:07.357Z | ERROR | Status: 404, Message: Pet not found., URL: /api/pets/expenses/688e8f29aaa30d4fded15a80, Method: GET
+2025-08-03T15:31:07.822Z | ERROR | Status: 404, Message: Pet not found., URL: /api/pets/expenses/688e8f29aaa30d4fded15a80, Method: GET

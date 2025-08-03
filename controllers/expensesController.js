@@ -3,20 +3,6 @@ const _ = require("lodash");
 
 const getAllExpenses = async (req, res, next) => {
   try {
-    const pet = await Pet.findOne({ _id: req.params.id }).lean();
-
-    // request validation
-    if (!req.user || (!pet.owner.equals(req.user._id) && !req.user.isAdmin)) {
-      const validationError = new Error("Unauthorized access");
-      validationError.statusCode = 403;
-      return next(validationError);
-    }
-    // system validation
-    if (!pet) {
-      const systemError = new Error("Pet not found.");
-      systemError.statusCode = 404;
-      return next(systemError);
-    }
     //process
     if (req.query && req.query.sort) {
       if (!["date", "amount", "category"].includes(req.query.sort)) {
@@ -31,12 +17,7 @@ const getAllExpenses = async (req, res, next) => {
       return next(validationError);
     }
 
-    let petWithExpenses = await Pet.findOne(
-      { _id: req.params.id },
-      { expenses: 1 }
-    ).lean();
-
-    let expenses = petWithExpenses.expenses;
+    let expenses = req.pet.expenses;
 
     if (req.query.sort) {
       const sortField = req.query.sort;
@@ -57,40 +38,20 @@ const getAllExpenses = async (req, res, next) => {
       expenses,
     });
   } catch (error) {
-    res
-      .status(500)
-      .json({ error: "An error occurred while fetching expenses." });
+    const systemError = new Error("An error occurred while fetching expenses.");
+    systemError.statusCode = 500;
+    return next(systemError);
   }
 };
 
 const addExpense = async (req, res, next) => {
   try {
-    const pet = await Pet.findOne({ _id: req.params.id });
-    console.log("Pet found:", pet);
-
     // request validation
     const { error } = addExpenseSchema.validate(req.body);
     if (error) {
       error.statusCode = 400;
       return next(error);
     }
-    console.log("Request body is valid:", req.body);
-
-    // Authorization
-    if (!req.user || (!pet.owner.equals(req.user._id) && !req.user.isAdmin)) {
-      const validationError = new Error("Unauthorized access");
-      validationError.statusCode = 403;
-      return next(validationError);
-    }
-    console.log("User is authorized:", req.user._id);
-
-    // System validation
-    if (!pet) {
-      const error = new Error("Pet not found");
-      error.statusCode = 404;
-      return next(error);
-    }
-    console.log("Pet exists:", pet._id);
     // Add expense to pet
     const expense = {
       description: req.body.description,
@@ -98,8 +59,8 @@ const addExpense = async (req, res, next) => {
       date: req.body.date,
       category: req.body.category,
     };
-    pet.expenses.push(expense);
-    await pet.save();
+    req.pet.expenses.push(expense);
+    await req.pet.save();
 
     console.log("Expense added:", expense);
 
@@ -108,9 +69,11 @@ const addExpense = async (req, res, next) => {
       expense,
     });
   } catch (error) {
-    res
-      .status(500)
-      .json({ error: "An error occurred while adding the expense." });
+    const systemError = new Error(
+      "An error occurred while adding the expense."
+    );
+    systemError.statusCode = 500;
+    return next(systemError);
   }
 };
 
@@ -123,20 +86,7 @@ const updateExpense = async (req, res, next) => {
       return next(error);
     }
 
-    const pet = await Pet.findById(petId);
-    if (!pet) {
-      const error = new Error("Pet not found");
-      error.statusCode = 404;
-      return next(error);
-    }
-
-    if (!req.user || (!pet.owner.equals(req.user._id) && !req.user.isAdmin)) {
-      const error = new Error("Unauthorized access");
-      error.statusCode = 403;
-      return next(error);
-    }
-
-    const expenseIndex = pet.expenses.findIndex(
+    const expenseIndex = req.pet.expenses.findIndex(
       (expense) => expense._id.toString() === expenseId
     );
     if (expenseIndex === -1) {
@@ -153,15 +103,15 @@ const updateExpense = async (req, res, next) => {
       return next(validationError);
     }
 
-    pet.expenses[expenseIndex] = {
-      ...pet.expenses[expenseIndex].toObject(),
+    req.pet.expenses[expenseIndex] = {
+      ...req.pet.expenses[expenseIndex].toObject(),
       ...req.body,
     };
 
-    await pet.save();
+    await req.pet.save();
     res.status(200).json({
       message: "Expense updated successfully",
-      expense: pet.expenses[expenseIndex],
+      expense: req.pet.expenses[expenseIndex],
     });
   } catch (error) {
     console.error("Error updating expense:", error);
@@ -175,22 +125,9 @@ const updateExpense = async (req, res, next) => {
 
 const deleteExpense = async (req, res, next) => {
   try {
-    const { id: petId, expenseId } = req.params;
-    const pet = await Pet.findById(petId);
+    const { id: expenseId } = req.params;
 
-    if (!pet) {
-      const error = new Error("Pet not found");
-      error.statusCode = 404;
-      return next(error);
-    }
-
-    if (!req.user || (!pet.owner === req.user._id && !req.user.isAdmin)) {
-      const error = new Error("Unauthorized access");
-      error.statusCode = 403;
-      return next(error);
-    }
-
-    const expenseIndex = pet.expenses.findIndex(
+    const expenseIndex = req.pet.expenses.findIndex(
       (expense) => expense._id.toString() === expenseId
     );
     if (expenseIndex === -1) {
@@ -199,8 +136,8 @@ const deleteExpense = async (req, res, next) => {
       return next(error);
     }
 
-    pet.expenses.splice(expenseIndex, 1);
-    await pet.save();
+    req.pet.expenses.splice(expenseIndex, 1);
+    await req.pet.save();
 
     res.status(200).json({
       message: "Expense deleted successfully",

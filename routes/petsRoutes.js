@@ -12,7 +12,7 @@ router.post("/", authMW, petsController.createPet);
 router.put("/:id", authMW, petsController.updatePet);
 router.delete("/:id", authMW, petsController.deletePet);
 router.use("/expenses", expensesRoutes);
-/*router.use("/reminders", remindersRoutes);
-router.use("/medical-records", medicalRecordsRoutes); */
+router.use("/reminders", remindersRoutes);
+/*router.use("/medical-records", medicalRecordsRoutes); */
 
 module.exports = router;

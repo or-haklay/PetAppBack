@@ -13,7 +13,9 @@ const expenseSchema = mongoose.Schema({
 
 const reminderSchema = mongoose.Schema({
   title: { type: String, required: true },
+  description: { type: String },
   date: { type: Date, required: true },
+  time: { type: String },
   isCompleted: { type: Boolean, default: false },
   repeatInterval: {
     type: String,
@@ -110,6 +112,16 @@ const addReminderSchema = Joi.object({
     "date.min": "Reminder date must be in the future",
     "any.required": "Reminder date is required",
   }),
+  description: Joi.string().max(500).optional().messages({
+    "string.base": "Description must be a string",
+    "string.max": "Description must not exceed 500 characters",
+  }),
+  time: Joi.string().optional().messages({
+    "string.base": "Time must be a string",
+  }),
+  repeatInterval: Joi.string()
+    .valid("none", "daily", "weekly", "monthly", "yearly")
+    .optional(),
 });
 
 const addMedicalRecordSchema = Joi.object({

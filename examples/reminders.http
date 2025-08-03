@@ -1,0 +1,50 @@
+@URL = http://localhost:3000/api/pets/reminders
+@tokenN =eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJfaWQiOiI2ODhlM2Y4YmI4YTc3NjNlZWNlYzk4ZDUiLCJpc0FkbWluIjpmYWxzZSwic3Vic2NyaXB0aW9uUGxhbiI6ImZyZWUiLCJuYW1lIjoiSm9obiBEb2UiLCJlbWFpbCI6ImpvZm5AZXhhbXBsZS5jb20iLCJpYXQiOjE3NTQxNzMxNjksImV4cCI6MTc1NDc3Nzk2OX0.VziHpZ7gsdmPiJ_JNbib7YPQyxe1uxumVMfzJhtTGYg
+@tokenA = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJfaWQiOiI2ODhlNDUyODY2YzRlMjM2YzNmZDhjNWYiLCJpc0FkbWluIjp0cnVlLCJzdWJzY3JpcHRpb25QbGFuIjoiZnJlZSIsIm5hbWUiOiJPciBIYWtsYXkiLCJlbWFpbCI6Im9yLmhha2xheUBnbWFpbC5jb20iLCJpYXQiOjE3NTQxNzI5MTksImV4cCI6MTc1NDc3NzcxOX0.foHx6mH4K0OnUKbvGviuxFxUg37AQZo8gekFRZ34B7o
+@id = 688e8f29aaa30d4fded15a80
+
+### Add a new reminder
+POST {{URL}}/{{id}}
+Content-Type: application/json
+authorization: {{tokenA}}
+
+{
+  "title": "Vet Appointment",
+  "description": "Annual check-up",
+  "date": "2025-09-16",
+  "time": "10:00",
+  "repeatInterval": "weekly"
+}
+
+### get all reminders for a pet
+GET {{URL}}/{{id}}
+authorization: {{tokenA}}
+
+### get last reminder for a pet
+GET {{URL}}/{{id}}?limit=1&sort=date
+authorization: {{tokenA}}
+
+### get reminder by id
+GET {{URL}}/{{id}}/688f74c97245daedda584438
+authorization: {{tokenA}}
+
+### get reminder by id
+PATCH {{URL}}/{{id}}/688f74c97245daedda584438
+authorization: {{tokenA}}
+
+### Update a reminder
+PUT {{URL}}/{{id}}/688f74c97245daedda584438
+authorization: {{tokenA}}
+Content-Type: application/json
+
+{
+  "title": "Vet Appointment Updated",
+  "description": "Updated annual check-up",
+  "date": "2025-09-17",
+  "time": "11:00",
+  "repeatInterval": "monthly"
+}
+
+### Delete a reminder
+DELETE {{URL}}/{{id}}/688f74d67245daedda58443c
+authorization: {{tokenA}}
