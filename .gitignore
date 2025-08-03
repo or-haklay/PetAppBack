@@ -1,5 +1,10 @@
 # Dependencies
 /node_modules
+# Logs
+/logs
+
+#example files
+/examples
 
 # Environment Variables
 .env
