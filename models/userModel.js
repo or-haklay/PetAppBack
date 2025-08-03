@@ -2,28 +2,46 @@ const mongoose = require("mongoose");
 const Joi = require("joi");
 const bcrypt = require("bcrypt");
 
-const userSchema = new mongoose.Schema({
-  name: { type: String, required: true },
-  email: { type: String, required: true, unique: true },
-  phone: { type: String },
+const userSchema = new mongoose.Schema(
+  {
+    name: { type: String, required: true },
+    email: { type: String, required: true, unique: true },
+    phone: { type: String },
 
-  password: { type: String },
+    password: { type: String },
 
-  googleId: { type: String },
-  facebookId: { type: String },
+    googleId: { type: String },
+    facebookId: { type: String },
 
-  isGold: { type: Boolean, default: false },
-  isAdmin: { type: Boolean, default: false },
+    subscriptionPlan: {
+      type: String,
+      enum: ["free", "premium", "gold"],
+      default: "free",
+    },
+    subscriptionExpiresAt: {
+      type: Date,
+      default: null,
+    },
 
-  bio: { type: String },
-  address: { type: String },
-  profilePicture: { type: String },
-  dateOfBirth: { type: Date },
+    isAdmin: { type: Boolean, default: false },
 
-  lastActive: { type: Date, default: Date.now },
-  lastLogin: { type: Date, default: Date.now },
-  createdAt: { type: Date, default: Date.now },
-});
+    bio: { type: String },
+    address: {
+      street: String,
+      city: String,
+      country: String,
+      houseNumber: Number,
+      zipCode: Number,
+    },
+    profilePicture: { type: String },
+    dateOfBirth: { type: Date },
+
+    lastActive: { type: Date, default: Date.now },
+  },
+  {
+    timestamps: true,
+  }
+);
 
 userSchema.pre("save", async function (next) {
   if (!this.isModified("password")) {
@@ -39,30 +57,40 @@ userSchema.pre("save", async function (next) {
   next();
 });
 
+userSchema.methods.isActiveSubscriber = function () {
+  return (
+    this.subscriptionPlan !== "free" &&
+    this.subscriptionExpiresAt &&
+    this.subscriptionExpiresAt > new Date()
+  );
+};
+
 const User = mongoose.model("User", userSchema, "users");
 
 const addressSchema = Joi.object({
   street: Joi.string().required(),
   city: Joi.string().required(),
   country: Joi.string().required(),
-  houseNumber: Joi.string(),
-  zipCode: Joi.string(),
+  houseNumber: Joi.number(),
+  zipCode: Joi.number(),
 });
 
 const updateProfileSchema = Joi.object({
   name: Joi.string().min(2),
-  phone: Joi.string().allow(null, ""), // מאפשר גם ערך ריק או null
+  phone: Joi.string()
+    .pattern(/^\+?[0-9]{7,15}$/)
+    .allow(null, ""),
   bio: Joi.string().allow(null, ""),
   address: addressSchema.allow(null, ""),
   profilePicture: Joi.string().uri().allow(null, ""), // מוודא שזה קישור תקין
   dateOfBirth: Joi.date().allow(null),
 });
 
-const registerSchema = Joi.object({
+const registerWithPasswordSchema = Joi.object({
   name: Joi.string().min(2).required(),
   email: Joi.string().email().required(),
   password: Joi.string()
-    .pattern(new RegExp("^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d).{8,}$"))
+    .pattern(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/)
     .required()
     .messages({
       "string.pattern.base":
@@ -70,10 +98,22 @@ const registerSchema = Joi.object({
       "any.required": "Password is required",
     }),
 });
+const registerWithSocialSchema = Joi.object({
+  name: Joi.string().min(2).required(),
+  email: Joi.string().email().required(),
+  googleId: Joi.string(),
+  facebookId: Joi.string(),
+}).or("googleId", "facebookId");
 
 const loginSchema = Joi.object({
   email: Joi.string().email().required(),
   password: Joi.string().required(),
 });
 
-module.exports = { User, registerSchema, loginSchema, updateProfileSchema };
+module.exports = {
+  User,
+  registerWithPasswordSchema,
+  loginSchema,
+  updateProfileSchema,
+  registerWithSocialSchema,
+};

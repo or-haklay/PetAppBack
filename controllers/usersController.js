@@ -99,9 +99,19 @@ const createUser = async (req, res, next) => {
   try {
     const newUser = req.body;
     // request validation
-    const { error } = registerSchema.validate(newUser);
+    const { error } = newUser.password
+      ? registerWithPasswordSchema.validate(newUser)
+      : registerWithSocialSchema.validate(newUser);
     if (error) {
       const validationError = new Error(error.details[0].message);
+      validationError.statusCode = 400;
+      return next(validationError);
+    }
+
+    if (!newUser.password && !newUser.googleId && !newUser.facebookId) {
+      const validationError = new Error(
+        "Password or social login ID is required"
+      );
       validationError.statusCode = 400;
       return next(validationError);
     }
@@ -154,14 +164,14 @@ const loginUser = async (req, res, next) => {
     //process
     const token = jwt.sign(
       {
-        userId: user._id,
+        _id: user._id,
         isAdmin: user.isAdmin,
-        isGold: user.isGold,
+        subscriptionPlan: user.subscriptionPlan,
         name: user.name,
         email: user.email,
-        phone: user.phone,
       },
-      process.env.JWT_KEY
+      process.env.JWT_KEY,
+      { expiresIn: "7d" }
     );
 
     // response
@@ -248,6 +258,34 @@ const deleteUser = async (req, res, next) => {
   }
 };
 
+const getCurrentUser = async (req, res, next) => {
+  try {
+    const user = await User.findById(req.user.userId).lean();
+    if (!user) {
+      const validationError = new Error("User not found");
+      validationError.statusCode = 404;
+      return next(validationError);
+    }
+
+    res.json({
+      user: _.pick(user, [
+        "_id",
+        "name",
+        "email",
+        "phone",
+        "profilePicture",
+        "subscriptionPlan",
+        "subscriptionExpiresAt",
+      ]),
+    });
+  } catch (error) {
+    console.error("Error fetching current user:", error);
+    const dbError = new Error("Database error occurred while fetching user");
+    dbError.statusCode = 500;
+    return next(dbError);
+  }
+};
+
 module.exports = {
   getAllUsers,
   getUserById,
@@ -255,4 +293,5 @@ module.exports = {
   updateUser,
   deleteUser,
   loginUser,
+  getCurrentUser,
 };

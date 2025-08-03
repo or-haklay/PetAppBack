@@ -1,7 +1,7 @@
 const jwt = require("jsonwebtoken");
 
-module.exports = function auth(req, res, next) {
-  const token = req.header("x-auth-token");
+function authMW(req, res, next) {
+  const token = req.header("authorization");
   if (!token) {
     const error = new Error("Access denied. No token provided.");
     error.statusCode = 401;
@@ -16,4 +16,19 @@ module.exports = function auth(req, res, next) {
     error.statusCode = 400;
     return next(error);
   }
+}
+
+const requireSubscriptionMW = async (req, res, next) => {
+  const user = await User.findById(req.user._id);
+  if (!user || !user.isActiveSubscriber()) {
+    const error = new Error("Active subscription required");
+    error.statusCode = 403;
+    return next(error);
+  }
+  next();
+};
+
+module.exports = {
+  authMW,
+  requireSubscriptionMW,
 };

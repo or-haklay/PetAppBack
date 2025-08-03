@@ -1,0 +1,39 @@
+@URL = http://localhost:3000/api/pets/expenses
+@tokenN =eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJfaWQiOiI2ODhlM2Y4YmI4YTc3NjNlZWNlYzk4ZDUiLCJpc0FkbWluIjpmYWxzZSwic3Vic2NyaXB0aW9uUGxhbiI6ImZyZWUiLCJuYW1lIjoiSm9obiBEb2UiLCJlbWFpbCI6ImpvZm5AZXhhbXBsZS5jb20iLCJpYXQiOjE3NTQxNzMxNjksImV4cCI6MTc1NDc3Nzk2OX0.VziHpZ7gsdmPiJ_JNbib7YPQyxe1uxumVMfzJhtTGYg
+@tokenA = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJfaWQiOiI2ODhlNDUyODY2YzRlMjM2YzNmZDhjNWYiLCJpc0FkbWluIjp0cnVlLCJzdWJzY3JpcHRpb25QbGFuIjoiZnJlZSIsIm5hbWUiOiJPciBIYWtsYXkiLCJlbWFpbCI6Im9yLmhha2xheUBnbWFpbC5jb20iLCJpYXQiOjE3NTQxNzI5MTksImV4cCI6MTc1NDc3NzcxOX0.foHx6mH4K0OnUKbvGviuxFxUg37AQZo8gekFRZ34B7o
+@id = 688e8f29aaa30d4fded15a80
+
+### Get all expenses
+GET {{URL}}/{{id}}
+authorization: {{tokenA}}
+
+### Get all expenses
+GET {{URL}}/{{id}}?sort=date&limit=3
+authorization: {{tokenA}}
+
+### Add a new expense
+POST {{URL}}/{{id}}
+Content-Type: application/json
+authorization: {{tokenA}}
+
+{
+  "date": "2023-09-16",
+  "amount": 150,
+  "category": "Food",
+  "description": "Dog food"
+}
+### update an expense
+PUT {{URL}}/{{id}}/688e9a5e6d0c9ed0e484d396
+Content-Type: application/json
+authorization: {{tokenA}}
+
+{
+  "date": "2023-09-16",
+  "amount": 200,
+  "category": "Food",
+  "description": "Dog food updated"
+}
+
+### Delete an expense
+DELETE {{URL}}/{{id}}/688e9a5e6d0c9ed0e484d396
+authorization: {{tokenA}}

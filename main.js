@@ -13,6 +13,7 @@ app.use(morgan("dev"));
 app.use(express.json());
 
 app.use("/api/users", require("./routes/usersRoutes"));
+app.use("/api/pets", require("./routes/petsRoutes"));
 
 app.use(errorLogger);
 

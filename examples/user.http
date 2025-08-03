@@ -1,10 +1,10 @@
 @URL = http://localhost:3000/api/users
-@tokenN = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2ODhlNDFjMDY3YjA1Y2Q4MTk1ODRkYmMiLCJpc0FkbWluIjpmYWxzZSwiaXNHb2xkIjpmYWxzZSwibmFtZSI6IkpvaG4gRG9lIiwiZW1haWwiOiJqb2YzMkBleGFtcGxlLmNvbSIsImlhdCI6MTc1NDE1NTExNX0.iekU_-Ew34nmF1MTB03H8wq023uU8yuCwkis0S0I7Sk
-@tokenA = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2ODhlNDUyODY2YzRlMjM2YzNmZDhjNWYiLCJpc0FkbWluIjp0cnVlLCJpc0dvbGQiOnRydWUsIm5hbWUiOiJPciBIYWtsYXkiLCJlbWFpbCI6Im9yLmhha2xheUBnbWFpbC5jb20iLCJpYXQiOjE3NTQxNTUxNDh9.zjLbr3w8v7M58zc2QVMdHxooYbnTIwDX2_FcAyyhj7A
+@tokenN = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJfaWQiOiI2ODhlM2Y4YmI4YTc3NjNlZWNlYzk4ZDUiLCJpc0FkbWluIjpmYWxzZSwic3Vic2NyaXB0aW9uUGxhbiI6ImZyZWUiLCJuYW1lIjoiSm9obiBEb2UiLCJlbWFpbCI6ImpvZm5AZXhhbXBsZS5jb20iLCJpYXQiOjE3NTQxNzMxNjksImV4cCI6MTc1NDc3Nzk2OX0.VziHpZ7gsdmPiJ_JNbib7YPQyxe1uxumVMfzJhtTGYg
+@tokenA = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJfaWQiOiI2ODhlNDUyODY2YzRlMjM2YzNmZDhjNWYiLCJpc0FkbWluIjp0cnVlLCJzdWJzY3JpcHRpb25QbGFuIjoiZnJlZSIsIm5hbWUiOiJPciBIYWtsYXkiLCJlbWFpbCI6Im9yLmhha2xheUBnbWFpbC5jb20iLCJpYXQiOjE3NTQxNzI5MTksImV4cCI6MTc1NDc3NzcxOX0.foHx6mH4K0OnUKbvGviuxFxUg37AQZo8gekFRZ34B7o
 
 ### Get all users
 GET {{URL}}
-x-auth-token: {{tokenA}}
+authorization: {{tokenA}}
 
 ### Get all users with pagination and sorting
 GET {{URL}}?limit=2&sort=name
@@ -26,14 +26,14 @@ POST {{URL}}/login
 Content-Type: application/json
 
 {
-  "email": "or.haklay@gmail.com",
+  "email": "jofn@example.com",
   "password": "Password123"
 }
 
 ### Update user by ID
 PUT {{URL}}/688e41c067b05cd819584dbc
 Content-Type: application/json
-x-auth-token: {{tokenN}}
+authorization: {{tokenN}}
 
 {
   "name": "John Doe Updated"
@@ -41,4 +41,4 @@ x-auth-token: {{tokenN}}
 
 ### Delete user by ID
 DELETE {{URL}}/688e41c067b05cd819584dbc
-x-auth-token: {{tokenN}}
+authorization: {{tokenA}}

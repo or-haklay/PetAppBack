@@ -1,0 +1,42 @@
+@URL = http://localhost:3000/api/pets
+@tokenN =eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJfaWQiOiI2ODhlM2Y4YmI4YTc3NjNlZWNlYzk4ZDUiLCJpc0FkbWluIjpmYWxzZSwic3Vic2NyaXB0aW9uUGxhbiI6ImZyZWUiLCJuYW1lIjoiSm9obiBEb2UiLCJlbWFpbCI6ImpvZm5AZXhhbXBsZS5jb20iLCJpYXQiOjE3NTQxNzMxNjksImV4cCI6MTc1NDc3Nzk2OX0.VziHpZ7gsdmPiJ_JNbib7YPQyxe1uxumVMfzJhtTGYg
+@tokenA = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJfaWQiOiI2ODhlNDUyODY2YzRlMjM2YzNmZDhjNWYiLCJpc0FkbWluIjp0cnVlLCJzdWJzY3JpcHRpb25QbGFuIjoiZnJlZSIsIm5hbWUiOiJPciBIYWtsYXkiLCJlbWFpbCI6Im9yLmhha2xheUBnbWFpbC5jb20iLCJpYXQiOjE3NTQxNzI5MTksImV4cCI6MTc1NDc3NzcxOX0.foHx6mH4K0OnUKbvGviuxFxUg37AQZo8gekFRZ34B7o
+
+### Get all pets
+GET {{URL}}
+authorization: {{tokenA}}
+
+### Get all pets with pagination and sorting
+GET {{URL}}?limit=2&sort=name
+authorization: {{tokenA}}
+
+
+### Get pet by ID
+GET {{URL}}/688e8e67aaa30d4fded15a71
+authorization: {{tokenA}}
+
+
+### Create a new pet
+POST {{URL}}
+Content-Type: application/json
+authorization: {{tokenN}}
+
+{
+  "name": "Bolty",
+  "type": "Dog",
+  "birthDate": "2020-01-01",
+  "profilePictureUrl": "http://example.com/bolt.jpg"
+}
+
+### Update pet by ID
+PUT {{URL}}/688e931b6eeb6b1621f276a8
+Content-Type: application/json
+authorization: {{tokenN}}
+
+{
+  "name": "Bolty Updated"
+}
+
+### Delete pet by ID
+DELETE {{URL}}/688e931b6eeb6b1621f276a8
+authorization: {{tokenA}}

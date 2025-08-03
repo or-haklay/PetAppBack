@@ -1,0 +1,63 @@
+2025-08-02T21:52:56.524Z | ERROR | Status: 500, Message: Database error occurred while fetching users, URL: /api/pets, Method: GET
+2025-08-02T21:54:58.015Z | ERROR | Status: 401, Message: Access denied. No token provided., URL: /api/pets?limit=2&sort=name, Method: GET
+2025-08-02T21:55:15.100Z | ERROR | Status: 404, Message: Pet not found, URL: /api/pets/688e3f8bb8a7763eecec98d5, Method: GET
+2025-08-02T21:55:23.026Z | ERROR | Status: 403, Message: Unauthorized access, URL: /api/pets/688e3f8bb8a7763eecec98d5, Method: GET
+2025-08-02T21:56:54.653Z | ERROR | Status: 500, Message: Database error occurred while creating pet, URL: /api/pets, Method: POST
+2025-08-02T21:57:20.680Z | ERROR | Status: 500, Message: Database error occurred while creating pet, URL: /api/pets, Method: POST
+2025-08-02T21:57:22.718Z | ERROR | Status: 500, Message: Database error occurred while creating pet, URL: /api/pets, Method: POST
+2025-08-02T21:59:00.455Z | ERROR | Status: 500, Message: Database error occurred while creating pet, URL: /api/pets, Method: POST
+2025-08-02T21:59:40.123Z | ERROR | Status: 500, Message: Database error occurred while creating pet, URL: /api/pets, Method: POST
+2025-08-02T21:59:44.248Z | ERROR | Status: 500, Message: Database error occurred while creating pet, URL: /api/pets, Method: POST
+2025-08-02T22:00:15.375Z | ERROR | Status: 500, Message: Database error occurred while creating pet, URL: /api/pets, Method: POST
+2025-08-02T22:00:28.571Z | ERROR | Status: 500, Message: Database error occurred while creating pet, URL: /api/pets, Method: POST
+2025-08-02T22:04:24.266Z | ERROR | Status: 500, Message: Database error occurred while creating pet, URL: /api/pets, Method: POST
+2025-08-02T22:06:14.313Z | ERROR | Status: 401, Message: Authentication required, URL: /api/pets, Method: POST
+2025-08-02T22:06:26.023Z | ERROR | Status: 401, Message: Authentication required, URL: /api/pets, Method: POST
+2025-08-02T22:07:01.207Z | ERROR | Status: 401, Message: Authentication required, URL: /api/pets, Method: POST
+2025-08-02T22:07:38.834Z | ERROR | Status: 401, Message: Authentication required, URL: /api/pets, Method: POST
+2025-08-02T22:10:21.200Z | ERROR | Status: 404, Message: Pet not found, URL: /api/pets/688e3f8bb8a7763eecec98d5, Method: GET
+2025-08-02T22:10:23.692Z | ERROR | Status: 401, Message: Authentication required, URL: /api/pets, Method: POST
+2025-08-02T22:10:31.741Z | ERROR | Status: 401, Message: Authentication required, URL: /api/pets, Method: POST
+2025-08-02T22:10:40.599Z | ERROR | Status: 401, Message: Authentication required, URL: /api/pets, Method: POST
+2025-08-02T22:13:11.351Z | ERROR | Status: 401, Message: Authentication required, URL: /api/pets, Method: POST
+2025-08-02T22:13:24.585Z | ERROR | Status: 401, Message: Authentication required, URL: /api/pets, Method: POST
+2025-08-02T22:13:40.404Z | ERROR | Status: 401, Message: Authentication required, URL: /api/pets, Method: POST
+2025-08-02T22:14:14.773Z | ERROR | Status: 401, Message: Authentication required, URL: /api/pets, Method: POST
+2025-08-02T22:15:39.462Z | ERROR | Status: 400, Message: "owner" is not allowed, URL: /api/pets, Method: POST
+2025-08-02T22:16:37.091Z | ERROR | Status: 500, Message: Database error occurred while creating pet, URL: /api/pets, Method: POST
+2025-08-02T22:17:25.550Z | ERROR | Status: 404, Message: Pet not found, URL: /api/pets/688e3f8bb8a7763eecec98d5, Method: GET
+2025-08-02T22:20:27.968Z | ERROR | Status: 409, Message: Pet with this name already exists, URL: /api/pets, Method: POST
+2025-08-02T22:21:32.082Z | ERROR | Status: 404, Message: Pet not found, URL: /api/pets/688e8e67aaa30d4fded15a71, Method: PUT
+2025-08-02T22:34:38.017Z | ERROR | Status: 403, Message: Unauthorized access, URL: /api/pets/688e8f0baaa30d4fded15a7a, Method: PUT
+2025-08-02T22:34:53.930Z | ERROR | Status: 403, Message: Unauthorized access, URL: /api/pets/688e8f0baaa30d4fded15a7a, Method: PUT
+2025-08-02T22:35:12.262Z | ERROR | Status: 403, Message: Unauthorized access, URL: /api/pets/688e8f29aaa30d4fded15a80, Method: PUT
+2025-08-02T22:35:13.181Z | ERROR | Status: 403, Message: Unauthorized access, URL: /api/pets/688e8f29aaa30d4fded15a80, Method: PUT
+2025-08-02T22:35:13.912Z | ERROR | Status: 403, Message: Unauthorized access, URL: /api/pets/688e8f29aaa30d4fded15a80, Method: PUT
+2025-08-02T22:35:20.590Z | ERROR | Status: 403, Message: Unauthorized access, URL: /api/pets/688e8f0baaa30d4fded15a7a, Method: PUT
+2025-08-02T22:35:30.317Z | ERROR | Status: 403, Message: Unauthorized access, URL: /api/pets/688e8f0baaa30d4fded15a7a, Method: PUT
+2025-08-02T22:35:44.744Z | ERROR | Status: 403, Message: Unauthorized access, URL: /api/pets/688e8f0baaa30d4fded15a7a, Method: PUT
+2025-08-02T22:36:17.010Z | ERROR | Status: 403, Message: Unauthorized access, URL: /api/pets/688e8f0baaa30d4fded15a7a, Method: PUT
+2025-08-02T22:36:52.403Z | ERROR | Status: 403, Message: Unauthorized access, URL: /api/pets/688e8f0baaa30d4fded15a7a, Method: PUT
+2025-08-02T22:37:41.256Z | ERROR | Status: 403, Message: Unauthorized access, URL: /api/pets/688e931b6eeb6b1621f276a8, Method: PUT
+2025-08-02T22:38:01.877Z | ERROR | Status: 403, Message: Unauthorized access, URL: /api/pets/688e931b6eeb6b1621f276a8, Method: PUT
+2025-08-02T22:39:58.779Z | ERROR | Status: 403, Message: Unauthorized access, URL: /api/pets/688e931b6eeb6b1621f276a8, Method: PUT
+2025-08-02T22:40:48.781Z | ERROR | Status: 403, Message: Unauthorized access, URL: /api/pets/688e931b6eeb6b1621f276a8, Method: PUT
+2025-08-02T22:42:51.573Z | ERROR | Status: 500, Message: Cannot access 'pet' before initialization, URL: /api/pets/688e931b6eeb6b1621f276a8, Method: DELETE
+2025-08-02T22:43:40.576Z | ERROR | Status: 500, Message: Cannot access 'pet' before initialization, URL: /api/pets/688e931b6eeb6b1621f276a8, Method: DELETE
+2025-08-02T22:43:57.338Z | ERROR | Status: 500, Message: Cannot access 'pet' before initialization, URL: /api/pets/688e931b6eeb6b1621f276a8, Method: DELETE
+2025-08-02T22:55:31.184Z | ERROR | Status: 404, Message: No expenses found for this pet., URL: /api/pets/expenses/688e8f29aaa30d4fded15a80, Method: GET
+2025-08-02T22:59:19.923Z | ERROR | Status: 403, Message: Unauthorized access, URL: /api/pets/expenses/688e8f29aaa30d4fded15a80, Method: POST
+2025-08-02T22:59:35.441Z | ERROR | Status: 400, Message: "name" is required, URL: /api/pets/expenses/688e8f29aaa30d4fded15a80, Method: POST
+2025-08-02T23:08:37.334Z | ERROR | Status: 400, Message: Category must be one of: Vet, Food, Grooming, Toys, Insurance, Other, URL: /api/pets/expenses/688e8f29aaa30d4fded15a80, Method: POST
+2025-08-02T23:17:16.607Z | ERROR | Status: 500, Message: An error occurred while fetching the pet., URL: /api/pets/expenses/688e8f29aaa30d4fded15a80/688e99dd7e8ba89b8ff2ccb0, Method: PUT
+2025-08-02T23:23:31.267Z | ERROR | Status: 404, Message: Expense not found, URL: /api/pets/expenses/688e8f29aaa30d4fded15a80/688e99dd7e8ba89b8ff2ccb0, Method: PUT
+2025-08-02T23:23:32.590Z | ERROR | Status: 404, Message: Expense not found, URL: /api/pets/expenses/688e8f29aaa30d4fded15a80/688e99dd7e8ba89b8ff2ccb0, Method: PUT
+2025-08-02T23:24:25.920Z | ERROR | Status: 400, Message: Category must be one of: Vet, Food, Grooming, Toys, Insurance, Other, URL: /api/pets/expenses/688e8f29aaa30d4fded15a80/688e99e79d58d2cf74c9f04a, Method: PUT
+2025-08-02T23:24:30.551Z | ERROR | Status: 404, Message: Expense not found, URL: /api/pets/expenses/688e8f29aaa30d4fded15a80/688e99e79d58d2cf74c9f04a, Method: PUT
+2025-08-02T23:25:40.762Z | ERROR | Status: 500, Message: An error occurred while updating the expense., URL: /api/pets/expenses/688e8f29aaa30d4fded15a80/688e9a5e6d0c9ed0e484d396, Method: PUT
+2025-08-02T23:25:43.484Z | ERROR | Status: 500, Message: An error occurred while updating the expense., URL: /api/pets/expenses/688e8f29aaa30d4fded15a80/688e9a5e6d0c9ed0e484d396, Method: PUT
+2025-08-02T23:25:44.108Z | ERROR | Status: 500, Message: An error occurred while updating the expense., URL: /api/pets/expenses/688e8f29aaa30d4fded15a80/688e9a5e6d0c9ed0e484d396, Method: PUT
+2025-08-02T23:25:44.663Z | ERROR | Status: 500, Message: An error occurred while updating the expense., URL: /api/pets/expenses/688e8f29aaa30d4fded15a80/688e9a5e6d0c9ed0e484d396, Method: PUT
+2025-08-02T23:25:45.189Z | ERROR | Status: 500, Message: An error occurred while updating the expense., URL: /api/pets/expenses/688e8f29aaa30d4fded15a80/688e9a5e6d0c9ed0e484d396, Method: PUT
+2025-08-02T23:25:45.703Z | ERROR | Status: 500, Message: An error occurred while updating the expense., URL: /api/pets/expenses/688e8f29aaa30d4fded15a80/688e9a5e6d0c9ed0e484d396, Method: PUT
+2025-08-02T23:28:46.348Z | ERROR | Status: 404, Message: Expense not found, URL: /api/pets/expenses/688e8f29aaa30d4fded15a80/688e9a5e6d0c9ed0e484d396, Method: DELETE

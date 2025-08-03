@@ -1,7 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const usersController = require("../controllers/usersController");
-const authMW = require("../middleware/authMW");
+const { authMW, requireSubscriptionMW } = require("../middleware/authMW");
 
 router.get("/", authMW, usersController.getAllUsers);
 router.get("/:id", authMW, usersController.getUserById);
