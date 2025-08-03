@@ -28,7 +28,7 @@ const medicalRecordSchema = mongoose.Schema({
   recordName: { type: String, required: true },
   recordType: { type: String, required: true },
   date: { type: Date, required: true },
-  fileUrl: { type: String, required: true },
+  fileUrl: { type: String },
   description: { type: String },
   veterinarianName: { type: String },
 });
@@ -151,9 +151,17 @@ const addMedicalRecordSchema = Joi.object({
     "date.max": "Date cannot be in the future",
     "any.required": "Date is required",
   }),
-  fileUrl: Joi.string().uri().required().messages({
+  fileUrl: Joi.string().uri().messages({
     "string.uri": "File URL must be a valid URI",
-    "any.required": "File URL is required",
+  }),
+  description: Joi.string().max(500).optional().messages({
+    "string.base": "Description must be a string",
+    "string.max": "Description must not exceed 500 characters",
+  }),
+  veterinarianName: Joi.string().min(2).max(100).messages({
+    "string.base": "Veterinarian name must be a string",
+    "string.min": "Veterinarian name must be at least 2 characters",
+    "string.max": "Veterinarian name must not exceed 100 characters",
   }),
 });
 

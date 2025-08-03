@@ -1,0 +1,44 @@
+@URL = http://localhost:3000/api/pets/medical-records
+@tokenN =eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJfaWQiOiI2ODhlM2Y4YmI4YTc3NjNlZWNlYzk4ZDUiLCJpc0FkbWluIjpmYWxzZSwic3Vic2NyaXB0aW9uUGxhbiI6ImZyZWUiLCJuYW1lIjoiSm9obiBEb2UiLCJlbWFpbCI6ImpvZm5AZXhhbXBsZS5jb20iLCJpYXQiOjE3NTQxNzMxNjksImV4cCI6MTc1NDc3Nzk2OX0.VziHpZ7gsdmPiJ_JNbib7YPQyxe1uxumVMfzJhtTGYg
+@tokenA = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJfaWQiOiI2ODhlNDUyODY2YzRlMjM2YzNmZDhjNWYiLCJpc0FkbWluIjp0cnVlLCJzdWJzY3JpcHRpb25QbGFuIjoiZnJlZSIsIm5hbWUiOiJPciBIYWtsYXkiLCJlbWFpbCI6Im9yLmhha2xheUBnbWFpbC5jb20iLCJpYXQiOjE3NTQxNzI5MTksImV4cCI6MTc1NDc3NzcxOX0.foHx6mH4K0OnUKbvGviuxFxUg37AQZo8gekFRZ34B7o
+@id = 688e8f29aaa30d4fded15a80
+
+### add a medical record
+POST {{URL}}/{{id}}
+Authorization: {{tokenA}}
+Content-Type: application/json
+
+{
+  "recordName": "Vaccination",
+  "recordType": "Vaccination",
+  "date": "2023-08-01",
+  "fileUrl": "https://example.com/vaccination_record.pdf",
+  "description": "Annual vaccination for rabies and distemper.",
+  "veterinarianName": "Dr. Jane Smith"
+}
+
+#### get all medical records
+GET {{URL}}/{{id}}
+Authorization: {{tokenA}}
+
+#### get all medical records
+GET {{URL}}/{{id}}?limit=2&sort=date
+Authorization: {{tokenA}}
+
+
+#### get all medical records
+GET {{URL}}/{{id}}/688fa9caa33b303ff4767446
+Authorization: {{tokenA}}
+
+#### update a medical record
+PUT {{URL}}/{{id}}/688fa9caa33b303ff4767446
+Authorization: {{tokenA}}
+Content-Type: application/json
+
+{
+  "recordName": "Updated Vaccination"
+}
+
+#### delete a medical record
+DELETE {{URL}}/{{id}}/688fa9caa33b303ff4767446
+Authorization: {{tokenA}}
