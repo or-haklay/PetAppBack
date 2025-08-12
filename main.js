@@ -14,6 +14,10 @@ app.use(express.json());
 
 app.use("/api/users", require("./routes/usersRoutes"));
 app.use("/api/pets", require("./routes/petsRoutes"));
+app.use("/api/places", require("./routes/placesRoutes"));
+
+app.use("/api/auth", require("./routes/authRoutes"));
+app.use("/api/chat", require("./routes/chatRoutes"));
 
 app.use(errorLogger);
 
@@ -22,7 +26,7 @@ mongoose
   .connect(process.env.MONGO_URI)
   .then(() => {
     console.log("Connected to MongoDB");
-    app.listen(PORT, () => {
+    app.listen(PORT, "0.0.0.0", () => {
       console.log(`Server is running on port ${PORT}`);
     });
   })

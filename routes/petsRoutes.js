@@ -7,6 +7,7 @@ const remindersRoutes = require("./remindersRoutes");
 const medicalRecordsRoutes = require("./medicalRecordsRoutes");
 
 router.get("/", authMW, petsController.getAllPets);
+router.get("/my-pets", authMW, petsController.getMyPets);
 router.get("/:id", authMW, petsController.getPetById);
 router.post("/", authMW, petsController.createPet);
 router.put("/:id", authMW, petsController.updatePet);

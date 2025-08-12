@@ -75,6 +75,34 @@ const getPetById = async (req, res, next) => {
   res.json({ message: "Get pet by ID", pet: pet });
 };
 
+const getMyPets = async (req, res, next) => {
+  try {
+    const { _id: userId } = req.user;
+    if (!userId) {
+      const authError = new Error("Authentication required");
+      authError.statusCode = 401;
+      return next(authError);
+    }
+    const pets = await Pet.find({ owner: userId });
+    if (!pets || pets.length === 0) {
+      return res.status(404).json({ message: "No pets found for this user" });
+    }
+    // Map to return only necessary fields
+    const safePets = pets.map((pet) => ({
+      _id: pet._id,
+      name: pet.name,
+      type: pet.type,
+      birthDate: pet.birthDate,
+      profilePictureUrl: pet.profilePictureUrl,
+    }));
+    res.json({ pets: safePets });
+  } catch (error) {
+    const dbError = new Error("Database error occurred while fetching pets");
+    dbError.statusCode = 500;
+    return next(dbError);
+  }
+};
+
 const createPet = async (req, res, next) => {
   try {
     // request validation
@@ -188,4 +216,5 @@ module.exports = {
   createPet,
   updatePet,
   deletePet,
+  getMyPets,
 };

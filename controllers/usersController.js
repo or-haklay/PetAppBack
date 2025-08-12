@@ -1,8 +1,10 @@
 const {
   User,
-  registerSchema,
+  changePasswordSchema,
   loginSchema,
   updateProfileSchema,
+  registerWithSocialSchema,
+  registerWithPasswordSchema,
 } = require("../models/userModel"); // Assuming you have a User model defined
 const _ = require("lodash");
 const bcrypt = require("bcrypt");
@@ -33,17 +35,23 @@ const getAllUsers = async (req, res, next) => {
       limit: req.query.limit,
       sort: { [req.query.sort]: 1 },
     }).lean();
+    // בתוך getAllUsers, בזמן ה-map:
     const safeUsers = _.map(users, (user) => {
       return _.pick(user, [
         "_id",
         "name",
         "email",
         "phone",
-        "isGold",
         "profilePicture",
         "dateOfBirth",
+        "subscriptionPlan",
+        "subscriptionExpiresAt",
+        "isAdmin",
+        "lastActive",
+        "createdAt",
       ]);
     });
+
     // response
     res.json({
       message: `Get all users ${
@@ -95,10 +103,12 @@ const getUserById = async (req, res, next) => {
   res.json({ message: "Get user by ID", user: selectedUserDetails });
 };
 
+const SALT_ROUNDS = 10;
+
 const createUser = async (req, res, next) => {
   try {
-    const newUser = req.body;
-    // request validation
+    const newUser = { ...req.body };
+
     const { error } = newUser.password
       ? registerWithPasswordSchema.validate(newUser)
       : registerWithSocialSchema.validate(newUser);
@@ -115,18 +125,38 @@ const createUser = async (req, res, next) => {
       validationError.statusCode = 400;
       return next(validationError);
     }
-    // system validation
+
+    // normalize email
+    if (newUser.email) newUser.email = String(newUser.email).toLowerCase();
+
+    // unique email
     const existingUser = await User.findOne({ email: newUser.email });
     if (existingUser) {
       const validationError = new Error("Email already exists");
       validationError.statusCode = 409;
       return next(validationError);
     }
-    // process
-    const user = new User(newUser);
 
+    // hash password if present
+    if (newUser.password) {
+      const salt = await bcrypt.genSalt(SALT_ROUNDS);
+      newUser.password = await bcrypt.hash(newUser.password, salt);
+    }
+
+    const user = new User(newUser);
     const savedUser = await user.save();
-    res.status(201).send({ message: "User created", user: savedUser });
+
+    res.status(201).send({
+      message: "User created",
+      user: _.pick(savedUser, [
+        "_id",
+        "name",
+        "email",
+        "phone",
+        "profilePicture",
+        "subscriptionPlan",
+      ]),
+    });
   } catch (error) {
     console.error("Error saving user:", error);
     const dbError = new Error("Database error occurred while creating user");
@@ -137,31 +167,37 @@ const createUser = async (req, res, next) => {
 
 const loginUser = async (req, res, next) => {
   try {
-    // request validation
     const { error } = loginSchema.validate(req.body);
     if (error) {
       const validationError = new Error(error.details[0].message);
       validationError.statusCode = 400;
       return next(validationError);
     }
-    // system validation
-    const user = await User.findOne({ email: req.body.email });
+
+    // אם בסכימה של User השדה password הוא select:false — חייבים לבחור אותו ידנית
+    const user = await User.findOne({
+      email: String(req.body.email).toLowerCase(),
+    }).select("+password");
     if (!user) {
       const validationError = new Error("Invalid email or password");
       validationError.statusCode = 401;
       return next(validationError);
     }
-    //compare password
+
     const validPassword = await bcrypt.compare(
       req.body.password,
-      user.password
+      user.password || ""
     );
     if (!validPassword) {
       const validationError = new Error("Invalid email or password");
       validationError.statusCode = 401;
       return next(validationError);
     }
-    //process
+
+    // עדכון פעילות אחרונה (לא חובה await)
+    user.lastActive = new Date();
+    await user.save();
+
     const token = jwt.sign(
       {
         _id: user._id,
@@ -174,11 +210,17 @@ const loginUser = async (req, res, next) => {
       { expiresIn: "7d" }
     );
 
-    // response
     res.send({
       message: "User logged in successfully",
-      token: token,
-      user: _.pick(user, ["_id", "name", "email", "phone", "isGold"]),
+      token,
+      user: _.pick(user, [
+        "_id",
+        "name",
+        "email",
+        "phone",
+        "profilePicture",
+        "subscriptionPlan",
+      ]),
     });
   } catch (error) {
     console.error("Error during user login:", error);
@@ -260,7 +302,14 @@ const deleteUser = async (req, res, next) => {
 
 const getCurrentUser = async (req, res, next) => {
   try {
-    const user = await User.findById(req.user.userId).lean();
+    const userId = req.user?._id; // חשוב: ה-MW צריך לשים כאן _id מתוך ה-JWT
+    if (!userId) {
+      const validationError = new Error("Unauthorized access");
+      validationError.statusCode = 401;
+      return next(validationError);
+    }
+
+    const user = await User.findById(userId).lean();
     if (!user) {
       const validationError = new Error("User not found");
       validationError.statusCode = 404;
@@ -273,14 +322,143 @@ const getCurrentUser = async (req, res, next) => {
         "name",
         "email",
         "phone",
+        "bio",
+        "address",
         "profilePicture",
+        "dateOfBirth",
         "subscriptionPlan",
         "subscriptionExpiresAt",
+        "isAdmin",
+        "lastActive",
+        "createdAt",
+        "updatedAt",
       ]),
     });
   } catch (error) {
     console.error("Error fetching current user:", error);
     const dbError = new Error("Database error occurred while fetching user");
+    dbError.statusCode = 500;
+    return next(dbError);
+  }
+};
+
+const updateMe = async (req, res, next) => {
+  try {
+    const userId = req.user?._id;
+    if (!userId) {
+      const validationError = new Error("Unauthorized access");
+      validationError.statusCode = 401;
+      return next(validationError);
+    }
+
+    // ולא מאפשרים כאן שדות רגישים כמו isAdmin/subscriptionPlan וכד'
+    const allowed = _.pick(req.body, [
+      "name",
+      "email",
+      "phone",
+      "bio",
+      "profilePicture",
+      "dateOfBirth",
+      "address.street",
+      "address.city",
+      "address.country",
+      "address.houseNumber",
+      "address.zipCode",
+    ]);
+
+    // אם אימייל — נרמול
+    if (allowed.email) allowed.email = String(allowed.email).toLowerCase();
+
+    // ולידציה עם הסכימה שלך
+    const { error } = updateProfileSchema.validate(req.body);
+    if (error) {
+      const validationError = new Error(error.details[0].message);
+      validationError.statusCode = 400;
+      return next(validationError);
+    }
+
+    const updatedUser = await User.findByIdAndUpdate(
+      userId,
+      { $set: allowed },
+      { new: true }
+    ).lean();
+
+    if (!updatedUser) {
+      const dbError = new Error("Database error occurred while updating user");
+      dbError.statusCode = 500;
+      return next(dbError);
+    }
+
+    res.send({
+      message: "User updated",
+      user: _.pick(updatedUser, [
+        "_id",
+        "name",
+        "email",
+        "phone",
+        "bio",
+        "address",
+        "profilePicture",
+        "dateOfBirth",
+        "subscriptionPlan",
+        "subscriptionExpiresAt",
+        "isAdmin",
+        "lastActive",
+        "createdAt",
+        "updatedAt",
+      ]),
+    });
+  } catch (error) {
+    console.error("Error updating user:", error);
+    const dbError = new Error("Database error occurred while updating user");
+    dbError.statusCode = 500;
+    return next(dbError);
+  }
+};
+
+const changePassword = async (req, res, next) => {
+  try {
+    const userId = req.user?._id;
+    if (!userId) {
+      const validationError = new Error("Unauthorized access");
+      validationError.statusCode = 401;
+      return next(validationError);
+    }
+
+    const { error } = changePasswordSchema.validate(req.body);
+    if (error) {
+      const validationError = new Error(error.details[0].message);
+      validationError.statusCode = 400;
+      return next(validationError);
+    }
+
+    const user = await User.findById(userId).select("+password");
+    if (!user) {
+      const validationError = new Error("User not found");
+      validationError.statusCode = 404;
+      return next(validationError);
+    }
+
+    const ok = await bcrypt.compare(
+      req.body.currentPassword,
+      user.password || ""
+    );
+    if (!ok) {
+      const validationError = new Error("Current password is incorrect");
+      validationError.statusCode = 401;
+      return next(validationError);
+    }
+
+    const salt = await bcrypt.genSalt(SALT_ROUNDS);
+    user.password = await bcrypt.hash(req.body.newPassword, salt);
+    await user.save();
+
+    res.send({ message: "Password changed successfully" });
+  } catch (error) {
+    console.error("Error changing password:", error);
+    const dbError = new Error(
+      "Database error occurred while changing password"
+    );
     dbError.statusCode = 500;
     return next(dbError);
   }
@@ -294,4 +472,6 @@ module.exports = {
   deleteUser,
   loginUser,
   getCurrentUser,
+  updateMe,
+  changePassword,
 };

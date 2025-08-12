@@ -82,7 +82,7 @@ const updateProfileSchema = Joi.object({
     .allow(null, ""),
   bio: Joi.string().allow(null, ""),
   address: addressSchema.allow(null, ""),
-  profilePicture: Joi.string().uri().allow(null, ""), // מוודא שזה קישור תקין
+  profilePicture: Joi.string().uri().allow(null, ""),
   dateOfBirth: Joi.date().allow(null),
 });
 
@@ -109,11 +109,17 @@ const loginSchema = Joi.object({
   email: Joi.string().email().required(),
   password: Joi.string().required(),
 });
-
+const changePasswordSchema = Joi.object({
+  currentPassword: Joi.string().required(),
+  newPassword: Joi.string()
+    .pattern(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/)
+    .required(),
+});
 module.exports = {
   User,
   registerWithPasswordSchema,
   loginSchema,
   updateProfileSchema,
+  changePasswordSchema,
   registerWithSocialSchema,
 };
