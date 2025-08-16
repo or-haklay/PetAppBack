@@ -14,6 +14,12 @@ app.use(express.json());
 
 app.use("/api/users", require("./routes/usersRoutes"));
 app.use("/api/pets", require("./routes/petsRoutes"));
+
+// ודא שיש auth שמכניס req.user.id
+app.use("/api/expenses", require("./routes/expensesRoutes"));
+app.use("/api/medical-records", require("./routes/medicalRecordsRoutes"));
+app.use("/api/reminders", require("./routes/remindersRoutes"));
+
 app.use("/api/places", require("./routes/placesRoutes"));
 
 app.use("/api/auth", require("./routes/authRoutes"));

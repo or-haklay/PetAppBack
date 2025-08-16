@@ -12,8 +12,8 @@ router.get("/:id", authMW, petsController.getPetById);
 router.post("/", authMW, petsController.createPet);
 router.put("/:id", authMW, petsController.updatePet);
 router.delete("/:id", authMW, petsController.deletePet);
-router.use("/expenses", expensesRoutes);
-router.use("/reminders", remindersRoutes);
-router.use("/medical-records", medicalRecordsRoutes);
+router.use("/:id/expenses", expensesRoutes);
+router.use("/:id/reminders", remindersRoutes);
+router.use("/:id/medical-records", medicalRecordsRoutes);
 
 module.exports = router;

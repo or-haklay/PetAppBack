@@ -1,27 +1,23 @@
 const express = require("express");
 const router = express.Router();
-const expensesController = require("../controllers/expensesController");
+const {
+  getAllExpenses,
+  addExpense,
+  updateExpense,
+  deleteExpense,
+} = require("../controllers/expensesController");
 const { authMW } = require("../middleware/authMW");
-const findAndAuthPet = require("../middleware/petAuthMW");
 
-router.get(
-  "/:petId",
-  authMW,
-  findAndAuthPet,
-  expensesController.getAllExpenses
-);
-router.post("/:petId", authMW, findAndAuthPet, expensesController.addExpense);
-router.put(
-  "/:petId/:expenseId",
-  authMW,
-  findAndAuthPet,
-  expensesController.updateExpense
-);
-router.delete(
-  "/:petId/:expenseId",
-  authMW,
-  findAndAuthPet,
-  expensesController.deleteExpense
-);
+router.use(authMW);
+
+// רשימה (תומך ב-petId, sort, order, limit, from, to)
+router.get("/", getAllExpenses);
+
+// יצירה (בגוף חייב להיות petId)
+router.post("/", addExpense);
+
+// עדכון/מחיקה לפי expenseId
+router.put("/:expenseId", updateExpense);
+router.delete("/:expenseId", deleteExpense);
 
 module.exports = router;

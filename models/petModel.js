@@ -1,38 +1,6 @@
 const mongoose = require("mongoose");
 const Joi = require("joi");
 
-const expenseSchema = mongoose.Schema({
-  description: { type: String, required: true },
-  amount: { type: Number, required: true },
-  date: { type: Date, required: true },
-  category: {
-    type: String,
-    enum: ["Vet", "Food", "Grooming", "Toys", "Insurance", "Other"],
-  },
-});
-
-const reminderSchema = mongoose.Schema({
-  title: { type: String, required: true },
-  description: { type: String },
-  date: { type: Date, required: true },
-  time: { type: String },
-  isCompleted: { type: Boolean, default: false },
-  repeatInterval: {
-    type: String,
-    enum: ["none", "daily", "weekly", "monthly", "yearly"],
-    default: "none",
-  },
-});
-
-const medicalRecordSchema = mongoose.Schema({
-  recordName: { type: String, required: true },
-  recordType: { type: String, required: true },
-  date: { type: Date, required: true },
-  fileUrl: { type: String },
-  description: { type: String },
-  veterinarianName: { type: String },
-});
-
 const petSchema = new mongoose.Schema(
   {
     owner: {
@@ -41,15 +9,19 @@ const petSchema = new mongoose.Schema(
       required: true,
     },
     name: { type: String, required: true },
-    type: { type: String, required: true },
+    species: { type: String, required: true }, // dog/cat/...
+    breed: String,
+    sex: {
+      type: String,
+      enum: ["male", "female", "unknown"],
+      default: "unknown",
+    },
+    weightKg: Number,
+    color: String,
+    chipNumber: String,
+    notes: String,
     birthDate: { type: Date },
     profilePictureUrl: { type: String },
-
-    expenses: [expenseSchema],
-
-    reminders: [reminderSchema],
-
-    medicalRecords: [medicalRecordSchema],
   },
   {
     timestamps: true,

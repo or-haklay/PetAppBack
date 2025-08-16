@@ -1,74 +1,79 @@
-const { Pet, addExpenseSchema } = require("../models/petModel"); // Assuming you have a Pet model defined
-const _ = require("lodash");
+const {
+  addExpenseSchema,
+  updateExpenseSchema,
+  listQuerySchema,
+  Expense,
+} = require("../models/ExpenseModel");
 
+// GET /api/expenses  או  /api/pets/:petId/expenses
 const getAllExpenses = async (req, res, next) => {
   try {
-    //process
-    if (req.query && req.query.sort) {
-      if (!["date", "amount", "category"].includes(req.query.sort)) {
-        const validationError = new Error("Invalid sort field");
-        validationError.statusCode = 400;
-        return next(validationError);
-      }
-    }
-    if (req.query && req.query.limit && isNaN(req.query.limit)) {
-      const validationError = new Error("Limit must be a number");
-      validationError.statusCode = 400;
-      return next(validationError);
-    }
+    // תומך גם בנתיב מקונן וגם בפרמטר query
+    const petIdFromParam = req.params.petId;
+    const query = { userId: req.user.id };
 
-    let expenses = req.pet.expenses;
-
-    if (req.query.sort) {
-      const sortField = req.query.sort;
-      expenses.sort((a, b) => {
-        if (a[sortField] < b[sortField]) return -1;
-        if (a[sortField] > b[sortField]) return 1;
-        return 0;
-      });
-    } else {
-      expenses.sort((a, b) => new Date(a.date) - new Date(b.date));
+    // ולאידציה ל-query
+    const { error, value } = listQuerySchema.validate(
+      { ...req.query, petId: req.query.petId || petIdFromParam },
+      { abortEarly: false, stripUnknown: true, convert: true }
+    );
+    if (error) {
+      error.statusCode = 400;
+      return next(error);
     }
 
-    if (req.query.limit) {
-      expenses = expenses.slice(0, parseInt(req.query.limit));
+    const { sort, order, limit, petId, from, to } = value;
+
+    if (petId) query.petId = petId;
+    if (from || to) {
+      query.date = {};
+      if (from) query.date.$gte = from;
+      if (to) query.date.$lte = to;
     }
 
-    res.status(200).json({
-      expenses,
-    });
-  } catch (error) {
+    // מיפוי סורט
+    const sortField = sort || "date";
+    const sortOrder = order === "desc" ? -1 : 1;
+
+    let q = Expense.find(query).sort({ [sortField]: sortOrder, _id: 1 });
+    if (limit) q = q.limit(limit);
+
+    const expenses = await q.lean();
+
+    return res.status(200).json({ expenses });
+  } catch (err) {
     const systemError = new Error("An error occurred while fetching expenses.");
     systemError.statusCode = 500;
     return next(systemError);
   }
 };
 
+// POST /api/expenses  או  /api/pets/:petId/expenses
 const addExpense = async (req, res, next) => {
   try {
-    // request validation
-    const { error } = addExpenseSchema.validate(req.body);
+    // אם הנתיב מקונן—נזריק petId מה-params לגוף
+    if (req.params.petId && !req.body.petId) {
+      req.body.petId = req.params.petId;
+    }
+
+    const { error, value } = addExpenseSchema.validate(req.body, {
+      abortEarly: false,
+      stripUnknown: true,
+      convert: true,
+    });
     if (error) {
       error.statusCode = 400;
       return next(error);
     }
-    // Add expense to pet
-    const expense = {
-      description: req.body.description,
-      amount: req.body.amount,
-      date: req.body.date,
-      category: req.body.category,
-    };
-    req.pet.expenses.push(expense);
-    await req.pet.save();
 
-    console.log("Expense added:", expense);
+    const expense = await Expense.create({ ...value, userId: req.user.id });
+    console.log("Expense added:", expense); // משאיר את הלוג כמו שאהבת
 
-    res.status(201).json({
+    return res.status(201).json({
       message: "Expense added successfully",
       expense,
     });
-  } catch (error) {
+  } catch (err) {
     const systemError = new Error(
       "An error occurred while adding the expense."
     );
@@ -77,44 +82,44 @@ const addExpense = async (req, res, next) => {
   }
 };
 
+// PUT /api/expenses/:expenseId
 const updateExpense = async (req, res, next) => {
   try {
-    const { id: petId, expenseId } = req.params;
+    const { expenseId } = req.params;
     if (!expenseId) {
       const error = new Error("Expense ID is required");
       error.statusCode = 400;
       return next(error);
     }
 
-    const expenseIndex = req.pet.expenses.findIndex(
-      (expense) => expense._id.toString() === expenseId
-    );
-    if (expenseIndex === -1) {
-      const error = new Error("Expense not found");
-      error.statusCode = 404;
+    const { error, value } = updateExpenseSchema.validate(req.body, {
+      abortEarly: false,
+      stripUnknown: true,
+      convert: true,
+    });
+    if (error) {
+      error.statusCode = 400;
       return next(error);
     }
 
-    // validate input
-    const { error } = addExpenseSchema.validate(req.body);
-    if (error) {
-      const validationError = new Error(error.details[0].message);
-      validationError.statusCode = 400;
-      return next(validationError);
+    const updated = await Expense.findOneAndUpdate(
+      { _id: expenseId, userId: req.user.id },
+      value,
+      { new: true }
+    );
+
+    if (!updated) {
+      const notFound = new Error("Expense not found");
+      notFound.statusCode = 404;
+      return next(notFound);
     }
 
-    req.pet.expenses[expenseIndex] = {
-      ...req.pet.expenses[expenseIndex].toObject(),
-      ...req.body,
-    };
-
-    await req.pet.save();
-    res.status(200).json({
+    return res.status(200).json({
       message: "Expense updated successfully",
-      expense: req.pet.expenses[expenseIndex],
+      expense: updated,
     });
-  } catch (error) {
-    console.error("Error updating expense:", error);
+  } catch (err) {
+    console.error("Error updating expense:", err);
     const systemError = new Error(
       "An error occurred while updating the expense."
     );
@@ -123,27 +128,23 @@ const updateExpense = async (req, res, next) => {
   }
 };
 
+// DELETE /api/expenses/:expenseId
 const deleteExpense = async (req, res, next) => {
   try {
-    const { id: expenseId } = req.params;
-
-    const expenseIndex = req.pet.expenses.findIndex(
-      (expense) => expense._id.toString() === expenseId
-    );
-    if (expenseIndex === -1) {
+    const { expenseId } = req.params;
+    const deleted = await Expense.findOneAndDelete({
+      _id: expenseId,
+      userId: req.user.id,
+    });
+    if (!deleted) {
       const error = new Error("Expense not found");
       error.statusCode = 404;
       return next(error);
     }
 
-    req.pet.expenses.splice(expenseIndex, 1);
-    await req.pet.save();
-
-    res.status(200).json({
-      message: "Expense deleted successfully",
-    });
-  } catch (error) {
-    console.error("Error deleting expense:", error);
+    return res.status(200).json({ message: "Expense deleted successfully" });
+  } catch (err) {
+    console.error("Error deleting expense:", err);
     const systemError = new Error(
       "An error occurred while deleting the expense."
     );

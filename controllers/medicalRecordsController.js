@@ -1,156 +1,134 @@
-const { Pet, addMedicalRecordSchema } = require("../models/petModel");
-const _ = require("lodash");
+const {
+  MedicalRecord,
+  medicalCreate,
+  medicalUpdate,
+  medicalListQuery,
+} = require("../models/MedicalRecordModel");
+
+const getAllMedicalRecords = async (req, res, next) => {
+  try {
+    const petIdFromParam = req.params.petId;
+    const { error, value } = medicalListQuery.validate(
+      { ...req.query, petId: req.query.petId || petIdFromParam },
+      { abortEarly: false, stripUnknown: true, convert: true }
+    );
+    if (error) {
+      error.statusCode = 400;
+      return next(error);
+    }
+
+    const { petId, from, to, sort, order, limit } = value;
+    const q = { userId: req.user.id };
+    if (petId) q.petId = petId;
+    if (from || to) {
+      q.date = {};
+      if (from) q.date.$gte = from;
+      if (to) q.date.$lte = to;
+    }
+    const sortField = sort || "date";
+    const sortOrder = order === "asc" ? 1 : -1;
+
+    let cursor = MedicalRecord.find(q).sort({ [sortField]: sortOrder, _id: 1 });
+    if (limit) cursor = cursor.limit(limit);
+
+    const records = await cursor.lean();
+    res.status(200).json({ records });
+  } catch (err) {
+    const e = new Error("An error occurred while fetching medical records.");
+    e.statusCode = 500;
+    next(e);
+  }
+};
 
 const addMedicalRecord = async (req, res, next) => {
   try {
-    //request body validation
-    const { error } = addMedicalRecordSchema.validate(req.body);
+    if (req.params.petId && !req.body.petId) req.body.petId = req.params.petId;
+
+    const { error, value } = medicalCreate.validate(req.body, {
+      abortEarly: false,
+      stripUnknown: true,
+      convert: true,
+    });
     if (error) {
-      return res.status(400).json({ error: error.details[0].message });
+      error.statusCode = 400;
+      return next(error);
     }
 
-    const newMedicalRecordData = req.body;
-    console.log("New Medical Record Data:", newMedicalRecordData);
-
-    req.pet.medicalRecords.push(newMedicalRecordData);
-    await req.pet.save();
-
-    res.status(201).json({
-      message: "Medical record added successfully",
-      medicalRecord: newMedicalRecordData,
-    });
-  } catch (error) {
-    const errorMessage = new Error("Failed to add medical record");
-    errorMessage.statusCode = 500;
-    return next(errorMessage);
-  }
-};
-
-const getMedicalRecords = async (req, res, next) => {
-  try {
-    let medicalRecords = req.pet.medicalRecords;
-    if (!medicalRecords || medicalRecords.length === 0) {
-      return res.status(404).json({ message: "No medical records found" });
-    }
-    if (req.query.sort) {
-      const sort = req.query.sort;
-      medicalRecords = _.orderBy(medicalRecords, [sort], ["asc"]);
-    }
-    if (req.query.limit) {
-      const limit = parseInt(req.query.limit, 10);
-      if (!isNaN(limit)) {
-        medicalRecords = medicalRecords.slice(0, limit);
-      }
-    }
-    console.log("Retrieved Medical Records:", medicalRecords);
-
-    res.status(200).json({
-      medicalRecords,
-    });
-  } catch (error) {
-    const errorMessage = new Error("Failed to retrieve medical records");
-    errorMessage.statusCode = 500;
-    return next(errorMessage);
-  }
-};
-
-const getMedicalRecordById = async (req, res, next) => {
-  try {
-    const recordId = req.params.recordId;
-    const medicalRecord = req.pet.medicalRecords.id(recordId);
-    if (!medicalRecord) {
-      return res.status(404).json({ message: "Medical record not found" });
-    }
-
-    res.status(200).json({
-      medicalRecord,
-    });
-  } catch (error) {
-    const errorMessage = new Error("Failed to retrieve medical record");
-    errorMessage.statusCode = 500;
-    return next(errorMessage);
+    const doc = await MedicalRecord.create({ ...value, userId: req.user.id });
+    res
+      .status(201)
+      .json({ message: "Medical record added successfully", record: doc });
+  } catch (err) {
+    const e = new Error("An error occurred while adding the medical record.");
+    e.statusCode = 500;
+    next(e);
   }
 };
 
 const updateMedicalRecord = async (req, res, next) => {
   try {
-    const recordId = req.params.recordId;
+    const { recordId } = req.params;
+    if (!recordId) {
+      const e = new Error("Record ID is required");
+      e.statusCode = 400;
+      return next(e);
+    }
 
-    const index = req.pet.medicalRecords.findIndex(
-      (record) => record._id.toString() === recordId
-    );
-
-    if (index === -1) {
-      const error = new Error("Medical record not found");
-      error.statusCode = 404;
+    const { error, value } = medicalUpdate.validate(req.body, {
+      abortEarly: false,
+      stripUnknown: true,
+      convert: true,
+    });
+    if (error) {
+      error.statusCode = 400;
       return next(error);
     }
-    const existingRecord = req.pet.medicalRecords[index];
-    const updatedData = {
-      ...existingRecord.toObject(),
-      ...req.body,
-    };
 
-    const { error } = addMedicalRecordSchema.validate(updatedData, {
-      stripUnknown: true,
-    });
-
-    if (error) {
-      const validationError = new Error(error.details[0].message);
-      validationError.statusCode = 400;
-      return next(validationError);
+    const updated = await MedicalRecord.findOneAndUpdate(
+      { _id: recordId, userId: req.user.id },
+      value,
+      { new: true }
+    );
+    if (!updated) {
+      const e = new Error("Medical record not found");
+      e.statusCode = 404;
+      return next(e);
     }
-
-    Object.assign(existingRecord, updatedData);
-
-    await req.pet.save();
 
     res.status(200).json({
       message: "Medical record updated successfully",
-      medicalRecord: existingRecord,
+      record: updated,
     });
-  } catch (error) {
-    const errorMessage = new Error("Failed to update medical record");
-    errorMessage.statusCode = 500;
-    return next(errorMessage);
+  } catch (err) {
+    const e = new Error("An error occurred while updating the medical record.");
+    e.statusCode = 500;
+    next(e);
   }
 };
 
 const deleteMedicalRecord = async (req, res, next) => {
   try {
-    const recordId = req.params.recordId;
-
-    const medicalRecordIndex = req.pet.medicalRecords.findIndex(
-      (record) => record._id.toString() === recordId
-    );
-
-    if (medicalRecordIndex === -1) {
-      const error = new Error("Medical record not found");
-      error.statusCode = 404;
-      return next(error);
-    }
-
-    const deletedRecord = req.pet.medicalRecords[medicalRecordIndex];
-
-    req.pet.medicalRecords.splice(medicalRecordIndex, 1);
-
-    await req.pet.save();
-
-    res.status(200).json({
-      message: "Medical record deleted successfully",
-      deletedMedicalRecord: deletedRecord,
+    const { recordId } = req.params;
+    const deleted = await MedicalRecord.findOneAndDelete({
+      _id: recordId,
+      userId: req.user.id,
     });
-  } catch (error) {
-    const errorMessage = new Error("Failed to delete medical record");
-    errorMessage.statusCode = 500;
-    return next(errorMessage);
+    if (!deleted) {
+      const e = new Error("Medical record not found");
+      e.statusCode = 404;
+      return next(e);
+    }
+    res.status(200).json({ message: "Medical record deleted successfully" });
+  } catch (err) {
+    const e = new Error("An error occurred while deleting the medical record.");
+    e.statusCode = 500;
+    next(e);
   }
 };
 
 module.exports = {
+  getAllMedicalRecords,
   addMedicalRecord,
-  getMedicalRecords,
-  getMedicalRecordById,
   updateMedicalRecord,
   deleteMedicalRecord,
 };
