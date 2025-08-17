@@ -19,8 +19,10 @@ app.use("/api/pets", require("./routes/petsRoutes"));
 app.use("/api/expenses", require("./routes/expensesRoutes"));
 app.use("/api/medical-records", require("./routes/medicalRecordsRoutes"));
 app.use("/api/reminders", require("./routes/remindersRoutes"));
+app.use("/api/notifications", require("./routes/notificationsRoutes"));
 
 app.use("/api/places", require("./routes/placesRoutes"));
+app.use("/api/calendar", require("./routes/calendarRoutes"));
 
 app.use("/api/auth", require("./routes/authRoutes"));
 app.use("/api/chat", require("./routes/chatRoutes"));

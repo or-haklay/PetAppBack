@@ -27,9 +27,60 @@ const reminderSchema = new mongoose.Schema(
     },
     timezone: { type: String, default: "Asia/Jerusalem" },
     lastSentAt: { type: Date },
+    // שדות חדשים ליומן גוגל
+    googleCalendarEventId: { type: String }, // ID של האירוע ביומן
+    googleCalendarEventLink: { type: String }, // קישור לאירוע
+    syncWithGoogle: { type: Boolean, default: true }, // האם לסנכרן עם גוגל
   },
   { timestamps: true }
 );
+
+// Middleware לשלב את התאריך והשעה לפני השמירה
+reminderSchema.pre('save', function(next) {
+  console.log("🔄 Pre-save middleware triggered:", {
+    hasTime: !!this.time,
+    hasDate: !!this.date,
+    time: this.time,
+    date: this.date,
+    dateType: typeof this.date
+  });
+
+  // אם יש שדה time ויש שדה date, נשלב אותם
+  if (this.time && this.date) {
+    const timeStr = this.time;
+    if (timeStr && /^([01]\d|2[0-3]):[0-5]\d$/.test(timeStr)) {
+      const [hours, minutes] = timeStr.split(':').map(Number);
+      const newDate = new Date(this.date);
+      newDate.setHours(hours, minutes, 0, 0);
+      
+      console.log("⏰ Combining date and time:", {
+        originalDate: this.date,
+        time: timeStr,
+        hours: hours,
+        minutes: minutes,
+        newDate: newDate
+      });
+      
+      this.date = newDate;
+    }
+  }
+  next();
+});
+
+// Middleware לשלב את התאריך והשעה לפני עדכון
+reminderSchema.pre('findOneAndUpdate', function(next) {
+  const update = this.getUpdate();
+  if (update.time && update.date) {
+    const timeStr = update.time;
+    if (timeStr && /^([01]\d|2[0-3]):[0-5]\d$/.test(timeStr)) {
+      const [hours, minutes] = timeStr.split(':').map(Number);
+      const newDate = new Date(update.date);
+      newDate.setHours(hours, minutes, 0, 0);
+      update.date = newDate;
+    }
+  }
+  next();
+});
 
 reminderSchema.index({ userId: 1, petId: 1, date: 1, isCompleted: 1 });
 
@@ -49,6 +100,7 @@ const reminderCreate = Joi.object({
     .valid("none", "daily", "weekly", "monthly", "yearly")
     .default("none"),
   timezone: Joi.string().default("Asia/Jerusalem"),
+  syncWithGoogle: Joi.boolean().default(true), // האם לסנכרן עם גוגל
 });
 
 const reminderUpdate = reminderCreate.min(1);

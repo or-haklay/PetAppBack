@@ -18,7 +18,7 @@ const getAllMedicalRecords = async (req, res, next) => {
     }
 
     const { petId, from, to, sort, order, limit } = value;
-    const q = { userId: req.user.id };
+    const q = { userId: req.user._id };
     if (petId) q.petId = petId;
     if (from || to) {
       q.date = {};
@@ -54,7 +54,7 @@ const addMedicalRecord = async (req, res, next) => {
       return next(error);
     }
 
-    const doc = await MedicalRecord.create({ ...value, userId: req.user.id });
+    const doc = await MedicalRecord.create({ ...value, userId: req.user._id });
     res
       .status(201)
       .json({ message: "Medical record added successfully", record: doc });
@@ -85,7 +85,7 @@ const updateMedicalRecord = async (req, res, next) => {
     }
 
     const updated = await MedicalRecord.findOneAndUpdate(
-      { _id: recordId, userId: req.user.id },
+      { _id: recordId, userId: req.user._id },
       value,
       { new: true }
     );
@@ -111,7 +111,7 @@ const deleteMedicalRecord = async (req, res, next) => {
     const { recordId } = req.params;
     const deleted = await MedicalRecord.findOneAndDelete({
       _id: recordId,
-      userId: req.user.id,
+      userId: req.user._id,
     });
     if (!deleted) {
       const e = new Error("Medical record not found");

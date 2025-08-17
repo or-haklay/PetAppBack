@@ -13,6 +13,12 @@ const userSchema = new mongoose.Schema(
     googleId: { type: String },
     facebookId: { type: String },
 
+    // Google Calendar integration
+    googleCalendarAccessToken: { type: String }, // Access token ליומן
+    googleCalendarRefreshToken: { type: String }, // Refresh token ליומן
+    googleCalendarTokenExpiry: { type: Date }, // מתי הטוקן פג תוקף
+    googleCalendarEnabled: { type: Boolean, default: false }, // האם יומן גוגל מופעל
+
     subscriptionPlan: {
       type: String,
       enum: ["free", "premium", "gold"],

@@ -33,7 +33,9 @@ expenseSchema.index({ userId: 1, petId: 1, date: -1 });
 
 const Expense = mongoose.model("Expense", expenseSchema, "expenses");
 
-const objectId = Joi.string().pattern(/^[0-9a-fA-F]{24}$/);
+const objectId = Joi.string()
+  .pattern(/^[0-9a-fA-F]{24}$/)
+  .optional();
 
 const expenseCreate = Joi.object({
   petId: objectId.required(), // שינוי: חובה לציין petId
@@ -49,15 +51,6 @@ const expenseCreate = Joi.object({
 
 const expenseUpdate = expenseCreate.min(1);
 
-const listQuerySchema = Joi.object({
-  sort: Joi.string().valid("date", "amount", "category"),
-  order: Joi.string().valid("asc", "desc").default("asc"),
-  limit: Joi.number().integer().min(1).max(200),
-  petId: objectId, // מאפשר /expenses?petId=...
-  from: Joi.date().iso(),
-  to: Joi.date().iso().greater(Joi.ref("from")).messages({
-    "date.greater": '"to" חייב להיות אחרי "from"',
-  }),
-});
+const listQuerySchema = Joi.object({}).unknown(true); // מאפשר כל ערך - בלי validation
 
 module.exports = { expenseCreate, expenseUpdate, Expense, listQuerySchema };

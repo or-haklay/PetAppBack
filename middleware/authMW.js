@@ -1,6 +1,7 @@
 const jwt = require("jsonwebtoken");
+const { User } = require("../models/userModel");
 
-function authMW(req, res, next) {
+async function authMW(req, res, next) {
   const token = req.header("authorization");
   if (!token) {
     const error = new Error("Access denied. No token provided.");
@@ -9,7 +10,21 @@ function authMW(req, res, next) {
   }
   try {
     const payload = jwt.verify(token, process.env.JWT_KEY);
-    req.user = payload; // Attach the user payload to the request object
+    
+    // הוספת Google Calendar access token מה-database
+    const user = await User.findById(payload._id);
+    if (user) {
+      req.user = {
+        ...payload,
+        googleCalendarAccessToken: user.googleCalendarAccessToken,
+        googleCalendarRefreshToken: user.googleCalendarRefreshToken,
+        googleCalendarTokenExpiry: user.googleCalendarTokenExpiry,
+        googleCalendarEnabled: user.googleCalendarEnabled
+      };
+    } else {
+      req.user = payload;
+    }
+    
     next();
   } catch (err) {
     const error = new Error(err.message || "Invalid token.");

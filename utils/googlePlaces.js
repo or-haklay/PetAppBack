@@ -5,7 +5,17 @@ const axios = require("axios");
 
 const GOOGLE_API_KEY = process.env.GOOGLE_MAPS_API_KEY;
 if (!GOOGLE_API_KEY) {
-  console.warn("[googlePlaces] Missing GOOGLE_MAPS_API_KEY in environment.");
+  console.error(
+    "❌ [googlePlaces] Missing GOOGLE_MAPS_API_KEY in environment."
+  );
+  console.error(
+    "❌ [googlePlaces] Please set GOOGLE_MAPS_API_KEY in your .env file"
+  );
+} else {
+  console.log(
+    "✅ [googlePlaces] Google Maps API key found:",
+    GOOGLE_API_KEY.substring(0, 10) + "..."
+  );
 }
 
 const BASE_URL = "https://places.googleapis.com/v1";
@@ -40,8 +50,27 @@ async function post(path, body, fieldMask, sessionToken) {
   if (sessionToken) headers["X-Goog-Session-Token"] = sessionToken;
   if (fieldMask) headers["X-Goog-FieldMask"] = fieldMask;
 
-  // after axios.post/get(...)
-  return axios.post(url, body, { headers, validateStatus: () => true });
+  console.log("🌐 Google Places POST request:", {
+    url,
+    path,
+    fieldMask,
+    hasSessionToken: !!sessionToken,
+  });
+
+  try {
+    const response = await axios.post(url, body, {
+      headers,
+      validateStatus: () => true,
+    });
+    console.log("✅ Google Places POST response:", {
+      status: response.status,
+      hasData: !!response.data,
+    });
+    return response;
+  } catch (error) {
+    console.error("❌ Google Places POST error:", error.message);
+    throw error;
+  }
 }
 
 async function get(path, fieldMask, sessionToken, params = {}) {
@@ -52,8 +81,29 @@ async function get(path, fieldMask, sessionToken, params = {}) {
   if (sessionToken) headers["X-Goog-Session-Token"] = sessionToken;
   if (fieldMask) headers["X-Goog-FieldMask"] = fieldMask;
 
-  // after axios.post/get(...)
-  return axios.get(url, { headers, params, validateStatus: () => true });
+  console.log("🌐 Google Places GET request:", {
+    url,
+    path,
+    fieldMask,
+    params,
+    hasSessionToken: !!sessionToken,
+  });
+
+  try {
+    const response = await axios.get(url, {
+      headers,
+      params,
+      validateStatus: () => true,
+    });
+    console.log("✅ Google Places GET response:", {
+      status: response.status,
+      hasData: !!response.data,
+    });
+    return response;
+  } catch (error) {
+    console.error("❌ Google Places GET error:", error.message);
+    throw error;
+  }
 }
 
 module.exports = {

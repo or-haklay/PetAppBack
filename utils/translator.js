@@ -48,8 +48,24 @@ async function withRetry(fn, times = 2, delayMs = 250) {
 }
 
 async function gTranslate(text, from, to) {
-  const { text: out } = await googleTranslate(text, { from, to });
-  return String(out || "").trim();
+  console.log("🌐 Google translate request:", {
+    from,
+    to,
+    text: text.substring(0, 50) + "...",
+  });
+
+  try {
+    const { text: out } = await googleTranslate(text, { from, to });
+    const result = String(out || "").trim();
+    console.log(
+      "✅ Google translate successful:",
+      result.substring(0, 50) + "..."
+    );
+    return result;
+  } catch (error) {
+    console.error("❌ Google translate failed:", error.message);
+    throw error;
+  }
 }
 
 async function deeplTranslate(text, toCode /* "EN"/"HE" */) {
@@ -62,51 +78,100 @@ async function deeplTranslate(text, toCode /* "EN"/"HE" */) {
 }
 
 async function llmTranslate(text, target /* "English"|"Hebrew" */) {
-  const { data } = await axios.post(
-    OLLAMA_GEN,
-    {
+  console.log("🤖 LLM translation request:", {
+    text: text.substring(0, 50) + "...",
+    target,
+    model: MODEL,
+    url: OLLAMA_GEN,
+  });
+
+  try {
+    const payload = {
       model: MODEL,
       prompt: `Translate into ${target} only. Return the translation only, no explanations:\n\n${text}`,
       stream: false,
       options: { temperature: 0.05, num_predict: 250 },
-    },
-    {
+    };
+
+    console.log("📤 Sending LLM request to Ollama...");
+    const { data } = await axios.post(OLLAMA_GEN, payload, {
       headers: { "Content-Type": "application/json" },
       timeout: parseInt(process.env.OLLAMA_TIMEOUT || "30000"),
+    });
+
+    console.log("✅ LLM response received:", {
+      hasData: !!data,
+      hasResponse: !!data?.response,
+    });
+    const result = String(data?.response || "").trim();
+    console.log("🎯 LLM translation result:", result.substring(0, 50) + "...");
+    return result;
+  } catch (error) {
+    console.error("❌ LLM translation failed:", error.message);
+    if (error.response) {
+      console.error("❌ Response status:", error.response.status);
+      console.error("❌ Response data:", error.response.data);
     }
-  );
-  return String(data?.response || "").trim();
+    throw error;
+  }
 }
 
 // --- he → en ---
 async function he2en(heText) {
+  console.log(
+    "🔄 Translating Hebrew to English:",
+    heText.substring(0, 50) + "..."
+  );
+
   try {
     const en = await withRetry(() => gTranslate(heText, "he", "en"), 2);
-    if (!isGenericBadEn(en)) return en;
+    if (!isGenericBadEn(en)) {
+      console.log(
+        "✅ Google translate successful:",
+        en.substring(0, 50) + "..."
+      );
+      return en;
+    }
     if (DEBUG) console.log("[TR] he→en generic:", en);
   } catch (e) {
+    console.error("❌ Google translate failed:", e?.message);
     if (DEBUG) console.log("[TR] he→en google failed:", e?.message);
   }
 
   try {
     if (PROVIDER === "deepl" && deepl) {
       const en = await withRetry(() => deeplTranslate(heText, "EN"), 2);
-      if (!isGenericBadEn(en)) return en;
+      if (!isGenericBadEn(en)) {
+        console.log(
+          "✅ DeepL translate successful:",
+          en.substring(0, 50) + "..."
+        );
+        return en;
+      }
       if (DEBUG) console.log("[TR] he→en deepl generic:", en);
     }
   } catch (e) {
+    console.error("❌ DeepL translate failed:", e?.message);
     if (DEBUG) console.log("[TR] he→en deepl failed:", e?.message);
   }
 
-  // פאלבק: תרגום במודל
   try {
-    const en = await llmTranslate(heText, "English");
-    return en;
+    console.log("🤖 Trying LLM translation...");
+    const en = await withRetry(() => llmTranslate(heText, "English"), 2);
+    if (!isGenericBadEn(en)) {
+      console.log("✅ LLM translate successful:", en.substring(0, 50) + "...");
+      return en;
+    }
+    if (DEBUG) console.log("[TR] he→en llm generic:", en);
   } catch (e) {
-    if (DEBUG) console.log("[TR] he→en LLM failed:", e?.message);
+    console.error("❌ LLM translate failed:", e?.message);
+    if (DEBUG) console.log("[TR] he→en llm failed:", e?.message);
   }
 
-  return heText; // לא נתקע
+  console.warn(
+    "⚠️ All translation methods failed, using original text as fallback"
+  );
+  return heText; // fallback to original
 }
 
 // --- en → he ---
