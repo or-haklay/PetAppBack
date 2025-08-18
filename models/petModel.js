@@ -22,6 +22,7 @@ const petSchema = new mongoose.Schema(
     notes: String,
     birthDate: { type: Date },
     profilePictureUrl: { type: String },
+    coverPictureUrl: { type: String },
   },
   {
     timestamps: true,
@@ -32,16 +33,30 @@ const Pet = mongoose.model("Pet", petSchema, "pets");
 
 const createPetSchema = Joi.object({
   name: Joi.string().min(2).required(),
-  type: Joi.string().required(),
+  species: Joi.string().required(), // שינוי מ-type ל-species
+  breed: Joi.string(),
+  sex: Joi.string().valid("male", "female", "unknown"),
+  weightKg: Joi.number().positive(),
+  color: Joi.string(),
+  chipNumber: Joi.string(),
+  notes: Joi.string(),
   birthDate: Joi.date(),
-  profilePictureUrl: Joi.string().uri(),
+  profilePictureUrl: Joi.string().uri().allow("", null),
+  coverPictureUrl: Joi.string().uri().allow("", null),
 });
 
 const updatePetSchema = Joi.object({
   name: Joi.string().min(2),
-  type: Joi.string(),
+  species: Joi.string(), // שינוי מ-type ל-species
+  breed: Joi.string(),
+  sex: Joi.string().valid("male", "female", "unknown"),
+  weightKg: Joi.number().positive(),
+  color: Joi.string(),
+  chipNumber: Joi.string(),
+  notes: Joi.string(),
   birthDate: Joi.date(),
-  profilePictureUrl: Joi.string().uri(),
+  profilePictureUrl: Joi.string().uri().allow("", null),
+  coverPictureUrl: Joi.string().uri().allow("", null),
 });
 
 const addExpenseSchema = Joi.object({

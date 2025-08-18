@@ -89,19 +89,9 @@ async function aggregateAllPets({
   sessionToken,
   maxResults,
 }) {
-  console.log("🐾 Starting aggregateAllPets with:", {
-    lat,
-    lng,
-    radius,
-    maxResults,
-  });
-
   const max = Math.min(+maxResults || 20, 20);
   const radiusNum = Math.min(+radius || 5000, 50000);
 
-  console.log(
-    "🔍 Creating nearby jobs for types: veterinary_care, pet_store, dog_park"
-  );
   const nearbyJobs = [
     post(
       "/places:searchNearby",
@@ -159,7 +149,6 @@ async function aggregateAllPets({
     ),
   ];
 
-  console.log("🔍 Creating text jobs for grooming, boarding, training");
   const textJobs = [
     post(
       "/places:searchText",
@@ -214,10 +203,8 @@ async function aggregateAllPets({
     ),
   ];
 
-  console.log("🚀 Executing all jobs with Promise.allSettled...");
   const results = await Promise.allSettled([...nearbyJobs, ...textJobs]);
 
-  console.log("📊 Processing results...");
   const seen = new Set();
   const places = [];
   for (let i = 0; i < results.length; i++) {
@@ -231,9 +218,6 @@ async function aggregateAllPets({
     }
 
     const arr = r.value?.data?.places || [];
-    console.log(
-      `✅ ${jobType} job ${jobIndex} succeeded, found ${arr.length} places`
-    );
 
     for (const p of arr) {
       if (!p?.id || seen.has(p.id)) continue;
@@ -244,11 +228,6 @@ async function aggregateAllPets({
     if (places.length >= max) break;
   }
 
-  console.log(
-    "🎯 AggregateAllPets complete, returning",
-    places.length,
-    "unique places"
-  );
   return { places };
 }
 
@@ -297,26 +276,17 @@ exports.search = async (req, res) => {
     const effectivePetCategory =
       petCategory || (!q && !category ? "all_pets" : undefined);
 
-    console.log("🎯 Effective pet category:", effectivePetCategory);
-
     const cacheKey = `search:${q || ""}:${category || ""}:${
       effectivePetCategory || ""
     }:${lat}:${lng}:${radiusNum}:${maxNum}:${rank}:${languageCode}`;
     const cached = getCache(cacheKey);
     if (cached) {
-      console.log("✅ Returning cached result for key:", cacheKey);
       return res.json(cached);
     }
 
     let responseData; // ensure declared
 
-    console.log(
-      "🔍 Starting places search with category:",
-      effectivePetCategory
-    );
-
     if (effectivePetCategory === "all_pets") {
-      console.log("🐾 Aggregating all pets...");
       responseData = await aggregateAllPets({
         lat,
         lng,
@@ -326,16 +296,10 @@ exports.search = async (req, res) => {
         sessionToken,
         maxResults: maxNum,
       });
-      console.log(
-        "✅ All pets aggregation complete, found:",
-        responseData?.places?.length || 0
-      );
     } else if (effectivePetCategory && PET_CATEGORY_MAP[effectivePetCategory]) {
       const rule = PET_CATEGORY_MAP[effectivePetCategory];
-      console.log("🏷️ Using pet category rule:", rule);
 
       if (rule.mode === "nearby") {
-        console.log("📍 Using nearby search for types:", rule.types);
         const resp = await post(
           "/places:searchNearby",
           {
@@ -355,12 +319,7 @@ exports.search = async (req, res) => {
           sessionToken
         );
         responseData = resp.data;
-        console.log(
-          "✅ Nearby search complete, found:",
-          responseData?.places?.length || 0
-        );
       } else if (rule.mode === "text") {
-        console.log("📝 Using text search with query:", rule.query);
         const resp = await post(
           "/places:searchText",
           {
@@ -379,12 +338,7 @@ exports.search = async (req, res) => {
           sessionToken
         );
         responseData = resp.data;
-        console.log(
-          "✅ Text search complete, found:",
-          responseData?.places?.length || 0
-        );
       } else if (rule.mode === "mixed") {
-        console.log("🔄 Using mixed search (nearby + text)");
         // combine Nearby + Text for better coverage
         const [a, b] = await Promise.allSettled([
           post(
@@ -438,13 +392,8 @@ exports.search = async (req, res) => {
           if (merged.length >= maxNum) break;
         }
         responseData = { places: merged };
-        console.log(
-          "✅ Mixed search complete, found:",
-          responseData?.places?.length || 0
-        );
       }
     } else if (q && !category) {
-      console.log("🔍 Using free text search with query:", q);
       // free text fallback
       const resp = await post(
         "/places:searchText",
@@ -464,12 +413,7 @@ exports.search = async (req, res) => {
         sessionToken
       );
       responseData = resp.data;
-      console.log(
-        "✅ Free text search complete, found:",
-        responseData?.places?.length || 0
-      );
     } else {
-      console.log("🏷️ Using legacy category search with category:", category);
       // legacy type
       const includedTypes = category ? [category] : undefined;
       const resp = await post(
@@ -491,20 +435,10 @@ exports.search = async (req, res) => {
         sessionToken
       );
       responseData = resp.data;
-      console.log(
-        "✅ Legacy category search complete, found:",
-        responseData?.places?.length || 0
-      );
     }
 
-    console.log("💾 Caching result with key:", cacheKey);
     setCache(cacheKey, responseData, TTL_SEARCH_MS);
 
-    console.log(
-      "✅ Places search successful, returning:",
-      responseData?.places?.length || 0,
-      "places"
-    );
     return res.json(responseData);
   } catch (err) {
     console.error("💥 Places search error:", err);

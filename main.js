@@ -24,6 +24,8 @@ app.use("/api/notifications", require("./routes/notificationsRoutes"));
 app.use("/api/places", require("./routes/placesRoutes"));
 app.use("/api/calendar", require("./routes/calendarRoutes"));
 
+app.use("/api/upload", require("./routes/uploadRoutes"));
+
 app.use("/api/auth", require("./routes/authRoutes"));
 app.use("/api/chat", require("./routes/chatRoutes"));
 

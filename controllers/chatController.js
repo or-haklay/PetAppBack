@@ -35,42 +35,84 @@ function resetHistory() {
   ];
 }
 
+// פונקציה ליצירת system prompt מותאם עם מידע על חיית המחמד
+function createSystemPrompt(petInfo) {
+  let basePrompt = "You are a PET-CARE expert. ONLY answer pet-related questions. " +
+    "Be concise. English only for internal reasoning. Do not include chain-of-thought.";
+  
+  if (petInfo && petInfo.name) {
+    const species = petInfo.species === 'dog' ? 'dog' : petInfo.species === 'cat' ? 'cat' : 'pet';
+    const sex = petInfo.sex === 'male' ? 'male' : petInfo.sex === 'female' ? 'female' : 'unknown';
+    
+    basePrompt += `\n\nIMPORTANT CONTEXT: The user has a ${species} named "${petInfo.name}". `;
+    
+    if (petInfo.breed) basePrompt += `Breed: ${petInfo.breed}. `;
+    if (petInfo.sex !== 'unknown') basePrompt += `Sex: ${sex}. `;
+    if (petInfo.weightKg) basePrompt += `Weight: ${petInfo.weightKg}kg. `;
+    if (petInfo.color) basePrompt += `Color: ${petInfo.color}. `;
+    if (petInfo.birthDate) {
+      const age = calculateAge(petInfo.birthDate);
+      basePrompt += `Age: approximately ${age}. `;
+    }
+    if (petInfo.notes) basePrompt += `Notes: ${petInfo.notes}. `;
+    
+    basePrompt += `\n\nWhen answering questions, consider this specific pet's details and provide personalized advice when relevant. `;
+    basePrompt += `Always refer to the pet by name when appropriate.`;
+  }
+  
+  return basePrompt;
+}
+
+// פונקציה לחישוב גיל
+function calculateAge(birthDate) {
+  if (!birthDate) return 'unknown';
+  
+  const birth = new Date(birthDate);
+  const now = new Date();
+  const diffTime = Math.abs(now - birth);
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  
+  if (diffDays < 30) return `${diffDays} days`;
+  if (diffDays < 365) return `${Math.floor(diffDays / 30)} months`;
+  return `${Math.floor(diffDays / 365)} years`;
+}
+
 function shorten(text, max = 500) {
   return text.length > max ? text.slice(0, max) + "..." : text;
 }
 
 exports.sendMessage = async (req, res) => {
   try {
-    console.log("🔍 Chat request received:", {
-      body: req.body,
-      headers: req.headers,
-    });
-
     const userRaw = String(req.body.prompt || "").trim();
     if (!userRaw) {
       console.error("❌ No prompt provided in request body");
       return res.status(400).json({ error: "Prompt is required" });
     }
 
-    console.log("📝 User message:", userRaw);
+    // קבלת מידע על חיית המחמד
+    const petInfo = req.body.petInfo || null;
+
+    // יצירת system prompt מותאם
+    const systemPrompt = createSystemPrompt(petInfo);
+
+    // איפוס ההיסטוריה עם ה-system prompt החדש
+    conversationHistory = [
+      {
+        role: "system",
+        content: systemPrompt,
+      },
+    ];
 
     const isHeb = hasHebrew(userRaw);
     const isEng = looksEnglish(userRaw);
 
-    console.log("🌍 Language detection:", { isHeb, isEng });
-
     // --- מסלול עברית: he→en→LLM→en→he
     if (isHeb) {
-      console.log("🇮🇱 Processing Hebrew message...");
       const userHe = shorten(userRaw, 500);
 
       let userEn;
       try {
         userEn = await he2en(userHe);
-        console.log(
-          "✅ Translation successful:",
-          userEn.substring(0, 50) + "..."
-        );
       } catch (translationError) {
         console.warn(
           "⚠️ Translation failed, using Hebrew text directly:",
@@ -86,7 +128,6 @@ exports.sendMessage = async (req, res) => {
 
       conversationHistory.push({ role: "user", content: userEn });
 
-      console.log("🤖 Calling Ollama chat...");
       let rawEn = await chat(conversationHistory, {
         temperature: 0.2,
         num_predict: 256,
@@ -114,8 +155,6 @@ exports.sendMessage = async (req, res) => {
         });
       }
 
-      console.log("✅ Ollama response received:", rawEn);
-
       let heOut;
       try {
         heOut = await en2he(rawEn);
@@ -129,20 +168,17 @@ exports.sendMessage = async (req, res) => {
       }
 
       conversationHistory.push({ role: "assistant", content: rawEn });
-      console.log("🎯 Final response:", heOut);
       return res.json({ reply: heOut || "לא הצלחתי לענות כרגע." });
     }
 
     // --- מסלול אנגלית: EN→LLM→EN (ללא תרגום)
     // אם זה לא עברית אבל נראה אנגלית – נטפל ככה
     if (isEng || !isHeb) {
-      console.log("🇺🇸 Processing English message...");
       const userEn = shorten(userRaw, 600);
       if (DEBUG) console.log("[CTRL] user EN (direct):", userEn);
 
       conversationHistory.push({ role: "user", content: userEn });
 
-      console.log("🤖 Calling Ollama chat...");
       let rawEn = await chat(conversationHistory, {
         temperature: 0.2,
         num_predict: 256,
@@ -163,11 +199,8 @@ exports.sendMessage = async (req, res) => {
         return res.json({ reply: "No response right now, please try again." });
       }
 
-      console.log("✅ Ollama response received:", rawEn);
-
       const finalEn = lightClean(stripThink(rawEn));
       conversationHistory.push({ role: "assistant", content: rawEn });
-      console.log("🎯 Final English response:", finalEn);
       return res.json({
         reply: finalEn || "No response right now, please try again.",
       });

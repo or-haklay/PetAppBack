@@ -6,6 +6,7 @@ const { authMW } = require("../middleware/authMW");
 router.use(authMW);
 
 router.get("/", c.getAllMedicalRecords);
+router.get("/:recordId", c.getMedicalRecord);
 router.post("/", c.addMedicalRecord);
 router.put("/:recordId", c.updateMedicalRecord);
 router.delete("/:recordId", c.deleteMedicalRecord);

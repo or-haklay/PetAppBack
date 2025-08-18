@@ -40,6 +40,34 @@ const getAllMedicalRecords = async (req, res, next) => {
   }
 };
 
+const getMedicalRecord = async (req, res, next) => {
+  try {
+    const { recordId } = req.params;
+    if (!recordId) {
+      const e = new Error("Record ID is required");
+      e.statusCode = 400;
+      return next(e);
+    }
+
+    const record = await MedicalRecord.findOne({
+      _id: recordId,
+      userId: req.user._id,
+    }).lean();
+
+    if (!record) {
+      const e = new Error("Medical record not found");
+      e.statusCode = 404;
+      return next(e);
+    }
+
+    res.status(200).json({ record });
+  } catch (err) {
+    const e = new Error("An error occurred while fetching the medical record.");
+    e.statusCode = 500;
+    next(e);
+  }
+};
+
 const addMedicalRecord = async (req, res, next) => {
   try {
     if (req.params.petId && !req.body.petId) req.body.petId = req.params.petId;
@@ -128,6 +156,7 @@ const deleteMedicalRecord = async (req, res, next) => {
 
 module.exports = {
   getAllMedicalRecords,
+  getMedicalRecord,
   addMedicalRecord,
   updateMedicalRecord,
   deleteMedicalRecord,

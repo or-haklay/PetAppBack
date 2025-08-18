@@ -51,7 +51,6 @@ const getAllPets = async (req, res, next) => {
 
 const getPetById = async (req, res, next) => {
   const pet = await Pet.findOne({ _id: req.params.id }).lean();
-  console.log("Pet found:", pet);
 
   // request validation
   if (
@@ -91,7 +90,7 @@ const getMyPets = async (req, res, next) => {
     const safePets = pets.map((pet) => ({
       _id: pet._id,
       name: pet.name,
-      type: pet.type,
+      species: pet.species, // שינוי מ-type ל-species
       birthDate: pet.birthDate,
       profilePictureUrl: pet.profilePictureUrl,
     }));
