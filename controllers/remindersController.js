@@ -225,9 +225,11 @@ const deleteReminder = async (req, res, next) => {
 const completeReminder = async (req, res, next) => {
   try {
     const { reminderId } = req.params;
+    const { isCompleted = true } = req.body; // קבלת הפרמטר מה-body
+    
     const updated = await Reminder.findOneAndUpdate(
       { _id: reminderId, userId: req.user._id },
-      { isCompleted: true },
+      { isCompleted },
       { new: true }
     );
     if (!updated) {
@@ -235,11 +237,16 @@ const completeReminder = async (req, res, next) => {
       e.statusCode = 404;
       return next(e);
     }
+    
+    const message = isCompleted 
+      ? "Reminder marked as completed" 
+      : "Reminder marked as incomplete";
+      
     res
       .status(200)
-      .json({ message: "Reminder marked as completed", reminder: updated });
+      .json({ message, reminder: updated });
   } catch (err) {
-    const e = new Error("An error occurred while completing the reminder.");
+    const e = new Error("An error occurred while updating the reminder completion status.");
     e.statusCode = 500;
     next(e);
   }

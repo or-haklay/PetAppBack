@@ -1,14 +1,15 @@
-const {
-  User,
-  changePasswordSchema,
-  loginSchema,
-  updateProfileSchema,
-  registerWithSocialSchema,
-  registerWithPasswordSchema,
-} = require("../models/userModel"); // Assuming you have a User model defined
-const _ = require("lodash");
+const express = require("express");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
+const _ = require("lodash");
+const {
+  User,
+  registerWithPasswordSchema,
+  loginSchema,
+  updateProfileSchema,
+  changePasswordSchema,
+  registerWithSocialSchema,
+} = require("../models/userModel");
 
 const getAllUsers = async (req, res, next) => {
   try {
@@ -137,17 +138,23 @@ const createUser = async (req, res, next) => {
       return next(validationError);
     }
 
-    // hash password if present
-    if (newUser.password) {
-      const salt = await bcrypt.genSalt(SALT_ROUNDS);
-      newUser.password = await bcrypt.hash(newUser.password, salt);
-    }
+    // Password will be hashed automatically by the pre-save hook in the model
 
     const user = new User(newUser);
     const savedUser = await user.save();
-
+    const token = jwt.sign(
+      {
+        _id: savedUser._id,
+        isAdmin: savedUser.isAdmin,
+        name: savedUser.name,
+        email: savedUser.email,
+      },
+      process.env.JWT_KEY,
+      { expiresIn: "7d" }
+    );
     res.status(201).send({
       message: "User created",
+      token,
       user: _.pick(savedUser, [
         "_id",
         "name",
@@ -449,8 +456,7 @@ const changePassword = async (req, res, next) => {
       return next(validationError);
     }
 
-    const salt = await bcrypt.genSalt(SALT_ROUNDS);
-    user.password = await bcrypt.hash(req.body.newPassword, salt);
+    user.password = req.body.newPassword;
     await user.save();
 
     res.send({ message: "Password changed successfully" });
