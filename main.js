@@ -31,7 +31,7 @@ app.use("/api/chat", require("./routes/chatRoutes"));
 
 app.use(errorLogger);
 
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 3000;
 mongoose
   .connect(process.env.MONGO_URI)
   .then(() => {
@@ -44,4 +44,4 @@ mongoose
     console.log(err);
   });
 
-//listen to port 3000 or 5000
+//listen to port 3000
