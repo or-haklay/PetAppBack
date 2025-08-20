@@ -2,7 +2,9 @@ const {
   s3,
   checkFileAccessibility,
   getPublicUrl,
+  uploadToS3,
 } = require("../config/s3Config");
+const { DeleteObjectCommand } = require("@aws-sdk/client-s3");
 
 module.exports = {
   // העלאת תמונת פרופיל
@@ -14,12 +16,18 @@ module.exports = {
         return next(error);
       }
 
-      const fileUrl = req.file.location; // URL מ-S3
+      // העלאה ל-S3 עם AWS SDK v3
+      const fileName = `${Date.now()}-${Math.round(Math.random() * 1e9)}-${
+        req.file.originalname
+      }`;
+      await uploadToS3(req.file.buffer, fileName, req.file.mimetype);
+
+      const fileUrl = getPublicUrl(fileName);
 
       // בדוק שהקובץ נגיש
-      const isAccessible = await checkFileAccessibility(req.file.key);
+      const isAccessible = await checkFileAccessibility(fileName);
       if (!isAccessible) {
-        console.warn("File uploaded but not accessible:", req.file.key);
+        console.warn("File uploaded but not accessible:", fileName);
       }
 
       res.json({
@@ -43,12 +51,18 @@ module.exports = {
         return next(error);
       }
 
-      const fileUrl = req.file.location;
+      // העלאה ל-S3 עם AWS SDK v3
+      const fileName = `${Date.now()}-${Math.round(Math.random() * 1e9)}-${
+        req.file.originalname
+      }`;
+      await uploadToS3(req.file.buffer, fileName, req.file.mimetype);
+
+      const fileUrl = getPublicUrl(fileName);
 
       // בדוק שהקובץ נגיש
-      const isAccessible = await checkFileAccessibility(req.file.key);
+      const isAccessible = await checkFileAccessibility(fileName);
       if (!isAccessible) {
-        console.warn("File uploaded but not accessible:", req.file.key);
+        console.warn("File uploaded but not accessible:", fileName);
       }
 
       res.json({
@@ -72,12 +86,18 @@ module.exports = {
         return next(error);
       }
 
-      const fileUrl = req.file.location;
+      // העלאה ל-S3 עם AWS SDK v3
+      const fileName = `${Date.now()}-${Math.round(Math.random() * 1e9)}-${
+        req.file.originalname
+      }`;
+      await uploadToS3(req.file.buffer, fileName, req.file.mimetype);
+
+      const fileUrl = getPublicUrl(fileName);
 
       // בדוק שהקובץ נגיש
-      const isAccessible = await checkFileAccessibility(req.file.key);
+      const isAccessible = await checkFileAccessibility(fileName);
       if (!isAccessible) {
-        console.warn("File uploaded but not accessible:", req.file.key);
+        console.warn("File uploaded but not accessible:", fileName);
       }
 
       res.json({
@@ -101,14 +121,20 @@ module.exports = {
         return next(error);
       }
 
-      const fileUrl = req.file.location;
+      // העלאה ל-S3 עם AWS SDK v3
+      const fileName = `${Date.now()}-${Math.round(Math.random() * 1e9)}-${
+        req.file.originalname
+      }`;
+      await uploadToS3(req.file.buffer, fileName, req.file.mimetype);
+
+      const fileUrl = getPublicUrl(fileName);
       const fileType = req.file.mimetype;
       const fileSize = req.file.size;
 
       // בדיקת נגישות
-      const isAccessible = await checkFileAccessibility(req.file.key);
+      const isAccessible = await checkFileAccessibility(fileName);
       if (!isAccessible) {
-        console.warn("File uploaded but not accessible:", req.file.key);
+        console.warn("File uploaded but not accessible:", fileName);
       }
 
       res.json({
@@ -139,12 +165,12 @@ module.exports = {
       // חילוץ שם הקובץ מה-URL
       const fileName = fileUrl.split("/").pop();
 
-      await s3
-        .deleteObject({
-          Bucket: process.env.AWS_S3_BUCKET,
-          Key: fileName,
-        })
-        .promise();
+      const command = new DeleteObjectCommand({
+        Bucket: process.env.AWS_S3_BUCKET,
+        Key: fileName,
+      });
+
+      await s3.send(command);
 
       res.json({
         success: true,
