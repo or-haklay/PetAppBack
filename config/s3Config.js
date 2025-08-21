@@ -2,6 +2,7 @@ const {
   S3Client,
   PutObjectCommand,
   HeadObjectCommand,
+  DeleteObjectCommand,
 } = require("@aws-sdk/client-s3");
 const multer = require("multer");
 
@@ -69,13 +70,11 @@ const getPublicUrl = (key) => {
   return `https://${process.env.AWS_S3_BUCKET}.s3.${process.env.AWS_REGION}.amazonaws.com/${key}`;
 };
 
-// פונקציה להעלאת קובץ (AWS SDK v3)
-async function uploadFile(fileBuffer, fileName, mimeType) {
-  const command = new PutObjectCommand({
-    Bucket: process.env.AWS_BUCKET_NAME,
+// פונקציה למחיקת קובץ מ-S3
+async function deleteFromS3(fileName) {
+  const command = new DeleteObjectCommand({
+    Bucket: process.env.AWS_S3_BUCKET,
     Key: fileName,
-    Body: fileBuffer,
-    ContentType: mimeType,
   });
 
   return await s3.send(command);
@@ -86,6 +85,6 @@ module.exports = {
   s3,
   checkFileAccessibility,
   getPublicUrl,
-  uploadFile,
   uploadToS3,
+  deleteFromS3,
 };
