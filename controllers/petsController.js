@@ -1,4 +1,7 @@
 const { Pet, createPetSchema, updatePetSchema } = require("../models/petModel"); // Assuming you have a Pet model defined
+const { MedicalRecord } = require("../models/MedicalRecordModel");
+const { Reminder } = require("../models/ReminderModel");
+const { Expense } = require("../models/ExpenseModel");
 const _ = require("lodash");
 
 const getAllPets = async (req, res, next) => {
@@ -86,19 +89,148 @@ const getMyPets = async (req, res, next) => {
     if (!pets || pets.length === 0) {
       return res.status(404).json({ message: "No pets found for this user" });
     }
-    // Map to return only necessary fields
-    const safePets = pets.map((pet) => ({
-      _id: pet._id,
-      name: pet.name,
-      species: pet.species, // שינוי מ-type ל-species
-      birthDate: pet.birthDate,
-      profilePictureUrl: pet.profilePictureUrl,
-    }));
-    res.json({ pets: safePets });
+    // קבלת מידע מקיף לכל חיה
+    console.log(`🐾 Getting comprehensive info for ${pets.length} pets...`);
+    const comprehensivePets = await Promise.all(
+      pets.map((pet) => getComprehensivePetInfo(pet))
+    );
+
+    console.log(
+      `✅ Successfully retrieved comprehensive info for ${comprehensivePets.length} pets`
+    );
+    res.json({ pets: comprehensivePets });
   } catch (error) {
+    console.error("Error in getMyPets:", error);
     const dbError = new Error("Database error occurred while fetching pets");
     dbError.statusCode = 500;
     return next(dbError);
+  }
+};
+
+// פונקציה חדשה להחזרת מידע מקיף על החיה
+const getComprehensivePetInfo = async (pet) => {
+  try {
+    const petId = pet._id;
+
+    // קבלת רשומות רפואיות
+    const medicalRecords = await MedicalRecord.find({ petId })
+      .sort({ date: -1 })
+      .limit(10)
+      .lean();
+
+    // קבלת תזכורות פעילות
+    const activeReminders = await Reminder.find({
+      petId,
+      isCompleted: false,
+      date: { $gte: new Date() },
+    })
+      .sort({ date: 1 })
+      .limit(5)
+      .lean();
+
+    // קבלת הוצאות אחרונות
+    const recentExpenses = await Expense.find({ petId })
+      .sort({ date: -1 })
+      .limit(10)
+      .lean();
+
+    // חישוב סטטיסטיקות
+    const totalExpenses = await Expense.aggregate([
+      { $match: { petId } },
+      { $group: { _id: null, total: { $sum: "$amount" } } },
+    ]);
+
+    const totalExpensesAmount =
+      totalExpenses.length > 0 ? totalExpenses[0].total : 0;
+
+    // חישוב גיל
+    let age = null;
+    if (pet.birthDate) {
+      const birth = new Date(pet.birthDate);
+      const now = new Date();
+      const diffTime = Math.abs(now - birth);
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+      if (diffDays < 30) age = `${diffDays} days`;
+      else if (diffDays < 365) age = `${Math.floor(diffDays / 30)} months`;
+      else age = `${Math.floor(diffDays / 365)} years`;
+    }
+
+    return {
+      // מידע בסיסי על החיה
+      _id: pet._id,
+      name: pet.name,
+      species: pet.species,
+      breed: pet.breed,
+      sex: pet.sex,
+      weightKg: pet.weightKg,
+      color: pet.color,
+      chipNumber: pet.chipNumber,
+      notes: pet.notes,
+      birthDate: pet.birthDate,
+      profilePictureUrl: pet.profilePictureUrl,
+      coverPictureUrl: pet.coverPictureUrl,
+      owner: pet.owner,
+      createdAt: pet.createdAt,
+      updatedAt: pet.updatedAt,
+
+      // מידע מחושב
+      age: age,
+
+      // רשומות רפואיות
+      medicalRecords: medicalRecords.map((record) => ({
+        recordName: record.recordName,
+        recordType: record.recordType,
+        date: record.date,
+        description: record.description,
+        veterinarianName: record.veterinarianName,
+        clinic: record.clinic,
+      })),
+
+      // תזכורות פעילות
+      activeReminders: activeReminders.map((reminder) => ({
+        title: reminder.title,
+        description: reminder.description,
+        date: reminder.date,
+        time: reminder.time,
+        repeatInterval: reminder.repeatInterval,
+      })),
+
+      // הוצאות
+      recentExpenses: recentExpenses.map((expense) => ({
+        description: expense.description,
+        amount: expense.amount,
+        category: expense.category,
+        date: expense.date,
+        vendor: expense.vendor,
+      })),
+
+      // סטטיסטיקות
+      totalExpensesAmount: totalExpensesAmount,
+      expensesCount: recentExpenses.length,
+      medicalRecordsCount: medicalRecords.length,
+      activeRemindersCount: activeReminders.length,
+    };
+  } catch (error) {
+    console.error("Error getting comprehensive pet info:", error);
+    // אם יש שגיאה, נחזיר רק את המידע הבסיסי
+    return {
+      _id: pet._id,
+      name: pet.name,
+      species: pet.species,
+      breed: pet.breed,
+      sex: pet.sex,
+      weightKg: pet.weightKg,
+      color: pet.color,
+      chipNumber: pet.chipNumber,
+      notes: pet.notes,
+      birthDate: pet.birthDate,
+      profilePictureUrl: pet.profilePictureUrl,
+      coverPictureUrl: pet.coverPictureUrl,
+      owner: pet.owner,
+      createdAt: pet.createdAt,
+      updatedAt: pet.updatedAt,
+    };
   }
 };
 
@@ -187,26 +319,118 @@ const updatePet = async (req, res, next) => {
 };
 
 const deletePet = async (req, res, next) => {
-  const pet = await Pet.findOne({ _id: req.params.id }).lean();
-  // request validation
-  if (!req.user || (!pet.owner.equals(req.user._id) && !req.user.isAdmin)) {
-    const validationError = new Error("Unauthorized access");
-    validationError.statusCode = 403;
-    return next(validationError);
+  try {
+    const pet = await Pet.findOne({ _id: req.params.id }).lean();
+
+    // request validation
+    if (!req.user || (!pet.owner.equals(req.user._id) && !req.user.isAdmin)) {
+      const validationError = new Error("Unauthorized access");
+      validationError.statusCode = 403;
+      return next(validationError);
+    }
+
+    //system validation
+    if (!pet) {
+      const validationError = new Error("Pet not found");
+      validationError.statusCode = 404;
+      return next(validationError);
+    }
+
+    console.log(
+      `🗑️ Starting deletion of pet ${pet.name} (ID: ${req.params.id}) and all related records...`
+    );
+
+    // מחיקת כל ההרשומות הקשורות לחיה
+    const petId = req.params.id;
+    const userId = req.user._id;
+
+    // מחיקת הוצאות
+    const deletedExpenses = await Expense.deleteMany({ petId, userId });
+    console.log(`💰 Deleted ${deletedExpenses.deletedCount} expenses`);
+
+    // מחיקת תזכורות
+    const deletedReminders = await Reminder.deleteMany({ petId, userId });
+    console.log(`⏰ Deleted ${deletedReminders.deletedCount} reminders`);
+
+    // מחיקת קבצים במסמכים רפואיים מ-S3 לפני מחיקת המסמכים
+    const medicalRecordsToDelete = await MedicalRecord.find({
+      petId,
+      userId,
+    }).lean();
+    for (const record of medicalRecordsToDelete) {
+      if (record.fileUrl) {
+        try {
+          // חילוץ שם הקובץ מה-URL
+          const fileName = record.fileUrl.split("/").pop();
+          const { deleteFromS3 } = require("../config/s3Config");
+          await deleteFromS3(fileName);
+          console.log(`📄 Deleted medical record file: ${fileName}`);
+        } catch (fileError) {
+          console.warn(
+            "⚠️ Could not delete medical record file:",
+            fileError.message
+          );
+        }
+      }
+    }
+
+    // מחיקת מסמכים רפואיים מהמסד נתונים
+    const deletedMedicalRecords = await MedicalRecord.deleteMany({
+      petId,
+      userId,
+    });
+    console.log(
+      `🏥 Deleted ${deletedMedicalRecords.deletedCount} medical records`
+    );
+
+    // מחיקת תמונות מ-S3 אם יש
+    if (pet.profilePictureUrl) {
+      try {
+        // חילוץ שם הקובץ מה-URL
+        const fileName = pet.profilePictureUrl.split("/").pop();
+        const { deleteFromS3 } = require("../config/s3Config");
+        await deleteFromS3(fileName);
+        console.log(`🖼️ Deleted profile picture: ${fileName}`);
+      } catch (imageError) {
+        console.warn(
+          "⚠️ Could not delete profile picture:",
+          imageError.message
+        );
+      }
+    }
+
+    if (pet.coverPictureUrl) {
+      try {
+        // חילוץ שם הקובץ מה-URL
+        const fileName = pet.coverPictureUrl.split("/").pop();
+        const { deleteFromS3 } = require("../config/s3Config");
+        await deleteFromS3(fileName);
+        console.log(`🖼️ Deleted cover picture: ${fileName}`);
+      } catch (imageError) {
+        console.warn("⚠️ Could not delete cover picture:", imageError.message);
+      }
+    }
+
+    // מחיקת החיה עצמה
+    await Pet.deleteOne({ _id: req.params.id });
+    console.log(`🐾 Deleted pet: ${pet.name}`);
+
+    //response
+    res.json({
+      message: "Pet and all related records deleted successfully",
+      pet: pet,
+      deletedCounts: {
+        expenses: deletedExpenses.deletedCount,
+        reminders: deletedReminders.deletedCount,
+        medicalRecords: deletedMedicalRecords.deletedCount,
+      },
+    });
+  } catch (error) {
+    console.error("❌ Error deleting pet:", error);
+    const dbError = new Error("Database error occurred while deleting pet");
+    dbError.statusCode = 500;
+    return next(dbError);
   }
-  //system validation
-
-  if (!pet) {
-    const validationError = new Error("Pet not found");
-    validationError.statusCode = 404;
-    return next(validationError);
-  }
-
-  // process
-  await Pet.deleteOne({ _id: req.params.id });
-
-  //response
-  res.json({ message: "Pet deleted", pet: pet });
 };
 
 module.exports = {
