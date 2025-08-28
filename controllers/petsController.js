@@ -53,28 +53,34 @@ const getAllPets = async (req, res, next) => {
 };
 
 const getPetById = async (req, res, next) => {
-  const pet = await Pet.findOne({ _id: req.params.id }).lean();
+  try {
+    const pet = await Pet.findOne({ _id: req.params.id }).lean();
 
-  // request validation
-  if (
-    !pet ||
-    !req.user ||
-    (req.user._id !== pet.owner.toString() && !req.user.isAdmin)
-  ) {
-    const validationError = new Error("Unauthorized access");
-    validationError.statusCode = 403;
-    return next(validationError);
+    // Check if pet exists first
+    if (!pet) {
+      const validationError = new Error("Pet not found");
+      validationError.statusCode = 404;
+      return next(validationError);
+    }
+
+    // Check authorization
+    if (
+      !req.user ||
+      (req.user._id !== pet.owner.toString() && !req.user.isAdmin)
+    ) {
+      const validationError = new Error("Unauthorized access");
+      validationError.statusCode = 403;
+      return next(validationError);
+    }
+
+    //response
+    res.json({ message: "Get pet by ID", pet: pet });
+  } catch (error) {
+    console.error("Error in getPetById:", error);
+    const dbError = new Error("Database error occurred while fetching pet");
+    dbError.statusCode = 500;
+    return next(dbError);
   }
-  //system validation
-
-  if (!pet) {
-    const validationError = new Error("Pet not found");
-    validationError.statusCode = 404;
-    return next(validationError);
-  }
-
-  //response
-  res.json({ message: "Get pet by ID", pet: pet });
 };
 
 const getMyPets = async (req, res, next) => {
@@ -87,7 +93,7 @@ const getMyPets = async (req, res, next) => {
     }
     const pets = await Pet.find({ owner: userId });
     if (!pets || pets.length === 0) {
-      return res.status(404).json({ message: "No pets found for this user" });
+      return res.json({ pets: [] });
     }
     // קבלת מידע מקיף לכל חיה
     console.log(`🐾 Getting comprehensive info for ${pets.length} pets...`);
