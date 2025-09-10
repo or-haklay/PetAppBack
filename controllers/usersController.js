@@ -127,6 +127,24 @@ const createUser = async (req, res, next) => {
       return next(validationError);
     }
 
+    // Validate terms and privacy acceptance (for password registration)
+    if (
+      newUser.password &&
+      (!newUser.termsAccepted || !newUser.privacyAccepted)
+    ) {
+      const validationError = new Error(
+        "Terms of service and privacy policy must be accepted"
+      );
+      validationError.statusCode = 400;
+      return next(validationError);
+    }
+
+    // Set consent timestamp and version
+    if (newUser.termsAccepted && newUser.privacyAccepted) {
+      newUser.consentTimestamp = new Date();
+      newUser.consentVersion = process.env.CONSENT_VERSION || "1.0";
+    }
+
     // normalize email
     if (newUser.email) newUser.email = String(newUser.email).toLowerCase();
 
@@ -476,6 +494,70 @@ const changePassword = async (req, res, next) => {
   }
 };
 
+const getConsentStatus = async (req, res, next) => {
+  try {
+    const user = await User.findById(req.user._id).select(
+      "termsAccepted privacyAccepted consentTimestamp consentVersion"
+    );
+
+    res.json({
+      message: "Consent status retrieved",
+      consent: {
+        termsAccepted: user.termsAccepted,
+        privacyAccepted: user.privacyAccepted,
+        consentTimestamp: user.consentTimestamp,
+        consentVersion: user.consentVersion,
+      },
+    });
+  } catch (error) {
+    const dbError = new Error(
+      "Database error occurred while fetching consent status"
+    );
+    dbError.statusCode = 500;
+    return next(dbError);
+  }
+};
+
+const updateConsent = async (req, res, next) => {
+  try {
+    const { termsAccepted, privacyAccepted } = req.body;
+
+    if (
+      typeof termsAccepted !== "boolean" ||
+      typeof privacyAccepted !== "boolean"
+    ) {
+      const validationError = new Error("Invalid consent values");
+      validationError.statusCode = 400;
+      return next(validationError);
+    }
+
+    const user = await User.findByIdAndUpdate(
+      req.user._id,
+      {
+        termsAccepted,
+        privacyAccepted,
+        consentTimestamp: new Date(),
+        consentVersion: process.env.CONSENT_VERSION || "1.0",
+      },
+      { new: true }
+    ).select("termsAccepted privacyAccepted consentTimestamp consentVersion");
+
+    res.json({
+      message: "Consent updated successfully",
+      consent: {
+        termsAccepted: user.termsAccepted,
+        privacyAccepted: user.privacyAccepted,
+        consentTimestamp: user.consentTimestamp,
+        consentVersion: user.consentVersion,
+      },
+    });
+  } catch (error) {
+    const dbError = new Error("Database error occurred while updating consent");
+    dbError.statusCode = 500;
+    return next(dbError);
+  }
+};
+
 module.exports = {
   getAllUsers,
   getUserById,
@@ -486,4 +568,6 @@ module.exports = {
   getCurrentUser,
   updateMe,
   changePassword,
+  getConsentStatus,
+  updateConsent,
 };

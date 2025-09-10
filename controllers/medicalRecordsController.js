@@ -4,6 +4,7 @@ const {
   medicalUpdate,
   medicalListQuery,
 } = require("../models/MedicalRecordModel");
+const { registerEventInternal } = require("../utils/gamificationService");
 
 const getAllMedicalRecords = async (req, res, next) => {
   try {
@@ -83,9 +84,28 @@ const addMedicalRecord = async (req, res, next) => {
     }
 
     const doc = await MedicalRecord.create({ ...value, userId: req.user._id });
+
+    // Gamification: award once per day per record id
+    let pointsAdded = 0;
+    try {
+      const result = await registerEventInternal(req.user._id, {
+        eventKey: "UPLOAD_MEDICAL_DOC",
+        targetId: String(doc._id),
+      });
+      pointsAdded = Number(result?.pointsAdded || 0);
+    } catch (e) {
+      console.error(
+        "[gamification] UPLOAD_MEDICAL_DOC failed:",
+        e.message || e
+      );
+    }
     res
       .status(201)
-      .json({ message: "Medical record added successfully", record: doc });
+      .json({
+        message: "Medical record added successfully",
+        record: doc,
+        pointsAdded,
+      });
   } catch (err) {
     const e = new Error("An error occurred while adding the medical record.");
     e.statusCode = 500;

@@ -4,6 +4,7 @@ const {
   listQuerySchema,
   Expense,
 } = require("../models/ExpenseModel");
+const { registerEventInternal } = require("../utils/gamificationService");
 
 // GET /api/expenses  או  /api/pets/:petId/expenses
 const getAllExpenses = async (req, res, next) => {
@@ -181,9 +182,22 @@ const addExpense = async (req, res, next) => {
 
     const expense = await Expense.create({ ...value, userId: req.user._id });
 
+    // Gamification: award once per day per expense id
+    let pointsAdded = 0;
+    try {
+      const result = await registerEventInternal(req.user._id, {
+        eventKey: "ADD_EXPENSE",
+        targetId: String(expense._id),
+      });
+      pointsAdded = Number(result?.pointsAdded || 0);
+    } catch (e) {
+      console.error("[gamification] ADD_EXPENSE failed:", e.message || e);
+    }
+
     return res.status(201).json({
       message: "Expense added successfully",
       expense,
+      pointsAdded,
     });
   } catch (err) {
     console.error("💥 Error in addExpense:", err);

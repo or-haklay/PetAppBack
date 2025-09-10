@@ -13,6 +13,31 @@ const userSchema = new mongoose.Schema(
     googleId: { type: String },
     facebookId: { type: String },
 
+    // Terms and Privacy Policy consent
+    termsAccepted: {
+      type: Boolean,
+      required: true,
+      default: false,
+    },
+    privacyAccepted: {
+      type: Boolean,
+      required: true,
+      default: false,
+    },
+    consentTimestamp: {
+      type: Date,
+      default: null,
+    },
+    consentVersion: {
+      type: String,
+      default: "1.0",
+    },
+    // Points system
+    points: { type: Number, default: 0 }, // נקודות מצטברות לשימוש
+    coins: { type: Number, default: 0 }, // מטבעות לרכישות
+    dailyStreak: { type: Number, default: 0 }, // רצף ימים
+    lastDailyAt: { type: Date, default: null }, // מתי עודכן/נוצר יום אחרון
+
     // Google Calendar integration
     googleCalendarAccessToken: { type: String }, // Access token ליומן
     googleCalendarRefreshToken: { type: String }, // Refresh token ליומן
@@ -241,6 +266,14 @@ const registerWithPasswordSchema = Joi.object({
         "Password must be at least 8 characters and include uppercase, lowercase and a number.",
       "any.required": "Password is required",
     }),
+  termsAccepted: Joi.boolean().valid(true).required().messages({
+    "any.only": "You must accept the terms of service",
+    "any.required": "Terms acceptance is required",
+  }),
+  privacyAccepted: Joi.boolean().valid(true).required().messages({
+    "any.only": "You must accept the privacy policy",
+    "any.required": "Privacy policy acceptance is required",
+  }),
 });
 
 const registerWithSocialSchema = Joi.object({

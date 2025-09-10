@@ -18,4 +18,8 @@ router.get("/:id", authMW, usersController.getUserById);
 router.put("/:id", authMW, usersController.updateUser);
 router.delete("/:id", authMW, usersController.deleteUser);
 
+// Consent management routes
+router.get("/consent-status", authMW, usersController.getConsentStatus);
+router.post("/update-consent", authMW, usersController.updateConsent);
+
 module.exports = router;

@@ -8,6 +8,7 @@ const { Notification } = require("../models/NotificationModel.js");
 
 const GoogleCalendarService = require("../utils/googleCalendar");
 const googleCalendar = new GoogleCalendarService();
+const { registerEventInternal } = require("../utils/gamificationService");
 
 const getAllReminders = async (req, res, next) => {
   try {
@@ -51,7 +52,7 @@ const addReminder = async (req, res, next) => {
       date: req.body.date,
       time: req.body.time,
       dateType: typeof req.body.date,
-      timeType: typeof req.body.time
+      timeType: typeof req.body.time,
     });
 
     const { error, value } = reminderCreate.validate(req.body, {
@@ -68,7 +69,7 @@ const addReminder = async (req, res, next) => {
     console.log("✅ Validated reminder data:", {
       validated: value,
       date: value.date,
-      time: value.time
+      time: value.time,
     });
 
     const doc = await Reminder.create({ ...value, userId: req.user._id });
@@ -77,7 +78,7 @@ const addReminder = async (req, res, next) => {
       id: doc._id,
       date: doc.date,
       time: doc.time,
-      finalDate: doc.date
+      finalDate: doc.date,
     });
 
     // סנכרון עם גוגל יומן
@@ -98,6 +99,18 @@ const addReminder = async (req, res, next) => {
         // לא נכשל אם גוגל לא עובד
       }
     }
+
+    // Gamification: award once per day per reminder id
+    let pointsAdded = 0;
+    try {
+      const result = await registerEventInternal(req.user._id, {
+        eventKey: "ADD_REMINDER",
+        targetId: String(doc._id),
+      });
+      pointsAdded = Number(result?.pointsAdded || 0);
+    } catch (e) {
+      console.error("[gamification] ADD_REMINDER failed:", e.message || e);
+    }
     try {
       const notification = new Notification({
         userId: req.user._id,
@@ -115,9 +128,11 @@ const addReminder = async (req, res, next) => {
       console.error("Error creating notification:", error);
       // לא נכשל אם ההתראה לא נוצרה
     }
-    res
-      .status(201)
-      .json({ message: "Reminder added successfully", reminder: doc });
+    res.status(201).json({
+      message: "Reminder added successfully",
+      reminder: doc,
+      pointsAdded,
+    });
   } catch (err) {
     const e = new Error("An error occurred while adding the reminder.");
     e.statusCode = 500;
@@ -226,7 +241,7 @@ const completeReminder = async (req, res, next) => {
   try {
     const { reminderId } = req.params;
     const { isCompleted = true } = req.body; // קבלת הפרמטר מה-body
-    
+
     const updated = await Reminder.findOneAndUpdate(
       { _id: reminderId, userId: req.user._id },
       { isCompleted },
@@ -237,16 +252,16 @@ const completeReminder = async (req, res, next) => {
       e.statusCode = 404;
       return next(e);
     }
-    
-    const message = isCompleted 
-      ? "Reminder marked as completed" 
+
+    const message = isCompleted
+      ? "Reminder marked as completed"
       : "Reminder marked as incomplete";
-      
-    res
-      .status(200)
-      .json({ message, reminder: updated });
+
+    res.status(200).json({ message, reminder: updated });
   } catch (err) {
-    const e = new Error("An error occurred while updating the reminder completion status.");
+    const e = new Error(
+      "An error occurred while updating the reminder completion status."
+    );
     e.statusCode = 500;
     next(e);
   }

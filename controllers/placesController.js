@@ -48,35 +48,62 @@ const PET_CATEGORY_MAP = {
     mode: "mixed",
     types: ["veterinary_care"],
     query:
-      "וטרינר OR מרפאה וטרינרית OR וטרינרית OR emergency vet OR vet clinic",
+      "וטרינר OR מרפאה וטרינרית OR וטרינרית OR וטרינריה OR מרפאת חיות OR בית חולים וטרינרי OR emergency vet OR vet clinic OR pet clinic OR animal hospital OR veterinarian",
   },
 
   // Nearby-valid types
-  pet_stores: { mode: "nearby", types: ["pet_store"] },
-  dog_parks: { mode: "nearby", types: ["dog_park"] },
+  // Broaden coverage by using mixed + text synonyms in HE/EN
+  pet_stores: {
+    mode: "mixed",
+    types: ["pet_store"],
+    query:
+      "חנות חיות OR חנות לבעלי חיים OR ציוד לחיות מחמד OR pet shop OR pet store",
+  },
+  dog_parks: {
+    mode: "mixed",
+    types: ["dog_park"],
+    query: "גן כלבים OR dog park",
+  },
 
   // Text search only (no official types allowed in Nearby)
   groomers: {
     mode: "text",
-    query: "מספרת כלבים OR מספרת לחיות מחמד OR dog groomer OR pet grooming",
+    query:
+      "מספרת כלבים OR מספרת לחיות מחמד OR ספר כלבים OR טיפוח כלבים OR grooming OR dog groomer OR pet grooming",
   },
   boarding: {
     mode: "text",
     query:
-      "פנסיון לכלבים OR דוגי דייקייר OR dog boarding OR dog daycare OR pet hotel",
-  },
-  sitters: {
-    mode: "text",
-    query: "דוג סיטר OR דוג ווקר OR dog sitter OR pet sitter OR dog walker",
+      "פנסיון לכלבים OR אירוח לכלבים OR מלון כלבים OR דוגי דייקייר OR daycare כלבים OR dog boarding OR dog daycare OR pet hotel",
   },
   trainers: {
     mode: "text",
-    query: "מאלף כלבים OR אילוף כלבים OR dog training OR pet trainer",
+    query:
+      "מאלף כלבים OR אילוף כלבים OR קורס אילוף OR dog training OR pet trainer",
   },
   shelters: {
-    mode: "text",
-    query: "עמותת בעלי חיים OR אימוץ כלבים OR animal shelter OR pet adoption",
+    mode: "mixed",
+    types: ["animal_shelter"],
+    query:
+      "עמותת בעלי חיים OR הצלת בעלי חיים OR אימוץ כלבים OR animal shelter OR pet adoption",
   },
+};
+
+// Name-based synonyms per category (he/en) to complement types filtering
+const CATEGORY_NAME_SYNONYMS = {
+  vets: ["וטרינר", "וטרינרית", "וטרינריה", "vet", "veterinarian", "clinic"],
+  pet_stores: [
+    "חנות חיות",
+    "חנות לבעלי חיים",
+    "ציוד לחיות",
+    "pet shop",
+    "pet store",
+  ],
+  dog_parks: ["גן כלבים", "dog park"],
+  groomers: ["מספרת כלבים", "ספר כלבים", "groom", "groomer", "grooming"],
+  boarding: ["פנסיון", "מלון כלבים", "אירוח", "boarding", "daycare", "hotel"],
+  trainers: ["מאלף", "אילוף", "training", "trainer"],
+  shelters: ["עמותה", "אימוץ", "shelter", "adoption", "rescue"],
 };
 
 // --- Helper: aggregate “all_pets” (multiple queries merged) ---
@@ -89,7 +116,7 @@ async function aggregateAllPets({
   sessionToken,
   maxResults,
 }) {
-  const max = Math.min(+maxResults || 20, 20);
+  const max = Math.min(+maxResults || 20, 50);
   const radiusNum = Math.min(+radius || 5000, 50000);
 
   const nearbyJobs = [
@@ -270,7 +297,7 @@ exports.search = async (req, res) => {
     }
 
     const radiusNum = Math.min(+radius || 5000, 50000);
-    const maxNum = Math.min(+maxResults || 20, 20);
+    const maxNum = Math.min(+maxResults || 20, 50);
 
     // default: if no q/category/petCategory => all_pets
     const effectivePetCategory =
@@ -280,11 +307,24 @@ exports.search = async (req, res) => {
       effectivePetCategory || ""
     }:${lat}:${lng}:${radiusNum}:${maxNum}:${rank}:${languageCode}`;
     const cached = getCache(cacheKey);
-    if (cached) {
+    // If there's a free‑text query, bypass cache to reflect user input immediately
+    if (!q && cached) {
       return res.json(cached);
     }
 
     let responseData; // ensure declared
+
+    const normalize = (s = "") => String(s || "").toLowerCase();
+    const matchesQuery = (place, query) => {
+      if (!query) return true;
+      const ql = normalize(query);
+      const name = normalize(place?.displayName?.text);
+      const address = normalize(place?.formattedAddress);
+      const types = Array.isArray(place?.types)
+        ? place.types.map((t) => normalize(t)).join(" ")
+        : "";
+      return name.includes(ql) || address.includes(ql) || types.includes(ql);
+    };
 
     if (effectivePetCategory === "all_pets") {
       responseData = await aggregateAllPets({
@@ -296,6 +336,7 @@ exports.search = async (req, res) => {
         sessionToken,
         maxResults: maxNum,
       });
+      // initial filter applied later (uniformly for all modes)
     } else if (effectivePetCategory && PET_CATEGORY_MAP[effectivePetCategory]) {
       const rule = PET_CATEGORY_MAP[effectivePetCategory];
 
@@ -323,7 +364,7 @@ exports.search = async (req, res) => {
         const resp = await post(
           "/places:searchText",
           {
-            textQuery: rule.query,
+            textQuery: q ? `${q} ${rule.query}` : rule.query,
             locationBias: {
               circle: {
                 center: { latitude: +lat, longitude: +lng },
@@ -362,7 +403,7 @@ exports.search = async (req, res) => {
           post(
             "/places:searchText",
             {
-              textQuery: rule.query,
+              textQuery: q ? `${q} ${rule.query}` : rule.query,
               locationBias: {
                 circle: {
                   center: { latitude: +lat, longitude: +lng },
@@ -437,6 +478,141 @@ exports.search = async (req, res) => {
       responseData = resp.data;
     }
 
+    // Final category guard + name-focused filtering and ranking
+    if (Array.isArray(responseData?.places)) {
+      // Enforce category-specific type constraints to reduce mismatches
+      const enforceCategory = (place) => {
+        if (!effectivePetCategory) return true;
+        const types = Array.isArray(place?.types) ? place.types : [];
+        const tset = new Set(types);
+        const name = String(place?.displayName?.text || "").toLowerCase();
+        const hasNameSyn = (cat) =>
+          (CATEGORY_NAME_SYNONYMS[cat] || []).some((w) =>
+            name.includes(String(w).toLowerCase())
+          );
+        switch (effectivePetCategory) {
+          case "vets":
+            return (
+              types.some((t) => /veterinar|veterinary/i.test(t)) ||
+              hasNameSyn("vets")
+            );
+          case "pet_stores":
+            return tset.has("pet_store") || hasNameSyn("pet_stores");
+          case "dog_parks":
+            return tset.has("dog_park") || hasNameSyn("dog_parks");
+          case "groomers":
+            return /groom/i.test(types.join(" ")) || hasNameSyn("groomers");
+          case "boarding":
+            return (
+              /boarding|hotel/i.test(types.join(" ")) || hasNameSyn("boarding")
+            );
+          case "trainers":
+            return /train/i.test(types.join(" ")) || hasNameSyn("trainers");
+          case "shelters":
+            return (
+              /shelter|adoption/i.test(types.join(" ")) ||
+              hasNameSyn("shelters")
+            );
+          default:
+            return true;
+        }
+      };
+
+      responseData.places = responseData.places.filter(enforceCategory);
+    }
+
+    if (q && Array.isArray(responseData?.places)) {
+      const ql = normalize(q);
+      const nameIncludes = (p) => normalize(p?.displayName?.text).includes(ql);
+      const addrTypesInclude = (p) => matchesQuery(p, q);
+
+      let places = responseData.places || [];
+      const nameMatches = places.filter(nameIncludes);
+      if (nameMatches.length > 0) {
+        places = nameMatches;
+      } else {
+        // fallback: allow address/types matches only if there are no name matches at all
+        places = places.filter(addrTypesInclude);
+      }
+
+      // Rank: name startsWith > name includes > others (already filtered), then rating desc
+      const score = (p) => {
+        const name = normalize(p?.displayName?.text);
+        if (name.startsWith(ql)) return 3;
+        if (name.includes(ql)) return 2;
+        return 1;
+      };
+      places = places
+        .map((p) => ({ p, s: score(p) }))
+        .sort((a, b) => b.s - a.s || (b.p?.rating || 0) - (a.p?.rating || 0))
+        .map((x) => x.p)
+        .slice(0, maxNum);
+
+      responseData = { places };
+    }
+
+    // If vets selected and results are sparse, try a fallback expanded search (larger radius)
+    if (
+      effectivePetCategory === "vets" &&
+      Array.isArray(responseData?.places) &&
+      responseData.places.length < Math.min(+maxResults || 20, 50) / 3
+    ) {
+      try {
+        const fallbackRadius = Math.min(radiusNum * 2, 50000);
+        const rule = PET_CATEGORY_MAP.vets;
+        const [fa, fb] = await Promise.allSettled([
+          post(
+            "/places:searchNearby",
+            {
+              includedTypes: rule.types,
+              locationRestriction: {
+                circle: {
+                  center: { latitude: +lat, longitude: +lng },
+                  radius: fallbackRadius,
+                },
+              },
+              rankPreference: rank === "distance" ? "DISTANCE" : "POPULARITY",
+              maxResultCount: Math.min(maxNum, 50),
+              regionCode,
+              languageCode,
+            },
+            LIST_FIELD_MASK,
+            sessionToken
+          ),
+          post(
+            "/places:searchText",
+            {
+              textQuery: q ? `${q} ${rule.query}` : rule.query,
+              locationBias: {
+                circle: {
+                  center: { latitude: +lat, longitude: +lng },
+                  radius: fallbackRadius,
+                },
+              },
+              maxResultCount: Math.min(maxNum, 50),
+              regionCode,
+              languageCode,
+            },
+            LIST_FIELD_MASK,
+            sessionToken
+          ),
+        ]);
+        const seen = new Set(responseData.places.map((p) => p.id));
+        for (const r of [fa, fb]) {
+          if (r.status !== "fulfilled") continue;
+          const arr = r.value?.data?.places || [];
+          for (const p of arr) {
+            if (!p?.id || seen.has(p.id)) continue;
+            seen.add(p.id);
+            responseData.places.push(p);
+            if (responseData.places.length >= maxNum) break;
+          }
+          if (responseData.places.length >= maxNum) break;
+        }
+      } catch {}
+    }
+
+    // Cache only after final filtering
     setCache(cacheKey, responseData, TTL_SEARCH_MS);
 
     return res.json(responseData);

@@ -37,17 +37,28 @@ function resetHistory() {
 
 // פונקציה ליצירת system prompt מותאם עם מידע על חיית המחמד
 function createSystemPrompt(petInfo) {
-  let basePrompt = "You are a PET-CARE expert. ONLY answer pet-related questions. " +
+  let basePrompt =
+    "You are a PET-CARE expert. ONLY answer pet-related questions. " +
     "Be concise. English only for internal reasoning. Do not include chain-of-thought.";
-  
+
   if (petInfo && petInfo.name) {
-    const species = petInfo.species === 'dog' ? 'dog' : petInfo.species === 'cat' ? 'cat' : 'pet';
-    const sex = petInfo.sex === 'male' ? 'male' : petInfo.sex === 'female' ? 'female' : 'unknown';
-    
+    const species =
+      petInfo.species === "dog"
+        ? "dog"
+        : petInfo.species === "cat"
+        ? "cat"
+        : "pet";
+    const sex =
+      petInfo.sex === "male"
+        ? "male"
+        : petInfo.sex === "female"
+        ? "female"
+        : "unknown";
+
     basePrompt += `\n\nIMPORTANT CONTEXT: The user has a ${species} named "${petInfo.name}". `;
-    
+
     if (petInfo.breed) basePrompt += `Breed: ${petInfo.breed}. `;
-    if (petInfo.sex !== 'unknown') basePrompt += `Sex: ${sex}. `;
+    if (petInfo.sex !== "unknown") basePrompt += `Sex: ${sex}. `;
     if (petInfo.weightKg) basePrompt += `Weight: ${petInfo.weightKg}kg. `;
     if (petInfo.color) basePrompt += `Color: ${petInfo.color}. `;
     if (petInfo.birthDate) {
@@ -55,23 +66,23 @@ function createSystemPrompt(petInfo) {
       basePrompt += `Age: approximately ${age}. `;
     }
     if (petInfo.notes) basePrompt += `Notes: ${petInfo.notes}. `;
-    
+
     basePrompt += `\n\nWhen answering questions, consider this specific pet's details and provide personalized advice when relevant. `;
     basePrompt += `Always refer to the pet by name when appropriate.`;
   }
-  
+
   return basePrompt;
 }
 
 // פונקציה לחישוב גיל
 function calculateAge(birthDate) {
-  if (!birthDate) return 'unknown';
-  
+  if (!birthDate) return "unknown";
+
   const birth = new Date(birthDate);
   const now = new Date();
   const diffTime = Math.abs(now - birth);
   const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-  
+
   if (diffDays < 30) return `${diffDays} days`;
   if (diffDays < 365) return `${Math.floor(diffDays / 30)} months`;
   return `${Math.floor(diffDays / 365)} years`;

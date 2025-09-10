@@ -3,6 +3,7 @@ const cors = require("cors");
 const mongoose = require("mongoose");
 const morgan = require("morgan");
 const errorLogger = require("./middleware/errorLogger");
+const { scheduleDailyMissions } = require("./utils/cron/dailyMissions");
 
 require("dotenv").config();
 
@@ -82,10 +83,13 @@ app.use("/api/medical-records", require("./routes/medicalRecordsRoutes"));
 app.use("/api/reminders", require("./routes/remindersRoutes"));
 app.use("/api/notifications", require("./routes/notificationsRoutes"));
 
+app.use("/api/gamification", require("./routes/gamificationRoutes"));
+
 app.use("/api/places", require("./routes/placesRoutes"));
 app.use("/api/calendar", require("./routes/calendarRoutes"));
 
 app.use("/api/upload", require("./routes/uploadRoutes"));
+app.use("/api/content", require("./routes/contentRoutes"));
 
 // Health check endpoint
 app.get("/health", (req, res) => {
@@ -163,6 +167,13 @@ mongoose
   .connect(process.env.MONGO_URI)
   .then(() => {
     console.log("✅ Connected to MongoDB");
+    // Start cron after DB is ready
+    try {
+      scheduleDailyMissions();
+      console.log("⏰ Daily missions scheduler started");
+    } catch (e) {
+      console.error("Failed to start daily missions scheduler:", e);
+    }
     app.listen(PORT, "0.0.0.0", () => {
       console.log(`🚀 Server is running on port ${PORT}`);
       console.log(`🌐 Server accessible at: http://localhost:${PORT}`);
