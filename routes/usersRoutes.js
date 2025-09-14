@@ -9,6 +9,7 @@ router.post("/", usersController.createUser);
 
 // פרופיל עצמי
 router.get("/me", authMW, usersController.getCurrentUser);
+router.get("/profile", authMW, usersController.getCurrentUser); // Alias for /me
 router.patch("/me", authMW, usersController.updateMe);
 router.post("/change-password", authMW, usersController.changePassword);
 
@@ -21,5 +22,8 @@ router.delete("/:id", authMW, usersController.deleteUser);
 // Consent management routes
 router.get("/consent-status", authMW, usersController.getConsentStatus);
 router.post("/update-consent", authMW, usersController.updateConsent);
+
+// Push notifications
+router.post("/push-token", authMW, usersController.updatePushToken);
 
 module.exports = router;

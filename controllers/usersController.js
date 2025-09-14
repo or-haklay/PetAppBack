@@ -342,6 +342,22 @@ const getCurrentUser = async (req, res, next) => {
 
     const user = await User.findById(userId).lean();
     if (!user) {
+      // If user not found in database, return user data from JWT token (for mock users)
+      if (req.user && req.user.email) {
+        return res.json({
+          user: {
+            _id: req.user._id,
+            name: req.user.name,
+            firstname: req.user.firstname,
+            lastname: req.user.lastname,
+            email: req.user.email,
+            role: req.user.role || "user",
+            permissions: req.user.permissions || ["read", "write"],
+            createdAt: req.user.createdAt || new Date().toISOString(),
+          },
+        });
+      }
+
       const validationError = new Error("User not found");
       validationError.statusCode = 404;
       return next(validationError);
@@ -558,6 +574,43 @@ const updateConsent = async (req, res, next) => {
   }
 };
 
+// עדכון Push Token
+const updatePushToken = async (req, res, next) => {
+  try {
+    const { pushToken, pushNotificationsEnabled } = req.body;
+
+    const updatedUser = await User.findByIdAndUpdate(
+      req.user._id,
+      {
+        pushToken,
+        pushNotificationsEnabled:
+          pushNotificationsEnabled !== undefined
+            ? pushNotificationsEnabled
+            : true,
+      },
+      { new: true }
+    );
+
+    if (!updatedUser) {
+      const e = new Error("User not found");
+      e.statusCode = 404;
+      return next(e);
+    }
+
+    res.status(200).json({
+      message: "Push token updated successfully",
+      user: {
+        pushToken: updatedUser.pushToken,
+        pushNotificationsEnabled: updatedUser.pushNotificationsEnabled,
+      },
+    });
+  } catch (err) {
+    const e = new Error("An error occurred while updating push token.");
+    e.statusCode = 500;
+    next(e);
+  }
+};
+
 module.exports = {
   getAllUsers,
   getUserById,
@@ -570,4 +623,5 @@ module.exports = {
   changePassword,
   getConsentStatus,
   updateConsent,
+  updatePushToken,
 };

@@ -44,6 +44,10 @@ const userSchema = new mongoose.Schema(
     googleCalendarTokenExpiry: { type: Date }, // מתי הטוקן פג תוקף
     googleCalendarEnabled: { type: Boolean, default: false }, // האם יומן גוגל מופעל
 
+    // Push Notifications
+    pushToken: { type: String }, // Expo push token להתראות
+    pushNotificationsEnabled: { type: Boolean, default: true }, // האם התראות מופעלות
+
     subscriptionPlan: {
       type: String,
       enum: ["free", "premium", "gold"],

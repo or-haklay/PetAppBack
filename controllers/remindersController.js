@@ -112,21 +112,31 @@ const addReminder = async (req, res, next) => {
       console.error("[gamification] ADD_REMINDER failed:", e.message || e);
     }
     try {
+      // יצירת התראה עם תאריך מתואם
       const notification = new Notification({
         userId: req.user._id,
         title: `תזכורת חדשה: ${doc.title}`,
         message: doc.description || "נוצרה תזכורת חדשה",
         type: "reminder",
         relatedId: doc._id,
-        scheduledFor: doc.date,
+        scheduledFor: doc.date, // התאריך המתואם מהמודל
         priority: "medium",
       });
 
       await notification.save();
-      console.log("Notification created for reminder");
+      console.log("✅ Notification created for reminder:", {
+        reminderId: doc._id,
+        scheduledFor: doc.date,
+        title: doc.title,
+      });
     } catch (error) {
-      console.error("Error creating notification:", error);
-      // לא נכשל אם ההתראה לא נוצרה
+      console.error("❌ Error creating notification:", error);
+      // לא נכשל אם ההתראה לא נוצרה, אבל נוסיף לוג מפורט
+      console.error("Reminder created but notification failed:", {
+        reminderId: doc._id,
+        userId: req.user._id,
+        error: error.message,
+      });
     }
     res.status(201).json({
       message: "Reminder added successfully",
@@ -168,6 +178,26 @@ const updateReminder = async (req, res, next) => {
       const e = new Error("Reminder not found");
       e.statusCode = 404;
       return next(e);
+    }
+
+    // עדכון התראה קיימת
+    try {
+      await Notification.findOneAndUpdate(
+        {
+          userId: req.user._id,
+          relatedId: reminderId,
+          type: "reminder",
+        },
+        {
+          title: `תזכורת מעודכנת: ${updated.title}`,
+          message: updated.description || "תזכורת עודכנה",
+          scheduledFor: updated.date,
+          priority: "medium",
+        }
+      );
+      console.log("✅ Notification updated for reminder:", reminderId);
+    } catch (notificationError) {
+      console.error("❌ Error updating notification:", notificationError);
     }
 
     // סנכרון עם גוגל יומן
@@ -216,6 +246,21 @@ const deleteReminder = async (req, res, next) => {
       return next(e);
     }
 
+    // מחיקת התראה קשורה
+    try {
+      await Notification.findOneAndUpdate(
+        {
+          userId: req.user._id,
+          relatedId: reminderId,
+          type: "reminder",
+        },
+        { isDeleted: true }
+      );
+      console.log("✅ Notification deleted for reminder:", reminderId);
+    } catch (notificationError) {
+      console.error("❌ Error deleting notification:", notificationError);
+    }
+
     // מחיקה מגוגל יומן
     if (req.user.googleCalendarAccessToken && deleted.googleCalendarEventId) {
       try {
@@ -251,6 +296,67 @@ const completeReminder = async (req, res, next) => {
       const e = new Error("Reminder not found");
       e.statusCode = 404;
       return next(e);
+    }
+
+    // אם התזכורת הושלמה ויש חזרה, ניצור תזכורת חדשה
+    if (isCompleted && updated.repeatInterval !== "none") {
+      try {
+        let nextDate = new Date(updated.date);
+
+        // חישוב התאריך הבא לפי סוג החזרה
+        switch (updated.repeatInterval) {
+          case "daily":
+            nextDate.setDate(nextDate.getDate() + 1);
+            break;
+          case "weekly":
+            nextDate.setDate(nextDate.getDate() + 7);
+            break;
+          case "monthly":
+            nextDate.setMonth(nextDate.getMonth() + 1);
+            break;
+          case "yearly":
+            nextDate.setFullYear(nextDate.getFullYear() + 1);
+            break;
+        }
+
+        // יצירת תזכורת חדשה
+        const newReminder = new Reminder({
+          userId: updated.userId,
+          petId: updated.petId,
+          title: updated.title,
+          description: updated.description,
+          date: nextDate,
+          time: updated.time,
+          repeatInterval: updated.repeatInterval,
+          timezone: updated.timezone,
+          syncWithGoogle: updated.syncWithGoogle,
+        });
+
+        await newReminder.save();
+
+        // יצירת התראה חדשה
+        const notification = new Notification({
+          userId: updated.userId,
+          title: `תזכורת חוזרת: ${newReminder.title}`,
+          message: newReminder.description || "נוצרה תזכורת חוזרת",
+          type: "reminder",
+          relatedId: newReminder._id,
+          scheduledFor: newReminder.date,
+          priority: "medium",
+        });
+
+        await notification.save();
+
+        console.log("✅ Created recurring reminder:", {
+          originalId: updated._id,
+          newId: newReminder._id,
+          nextDate: nextDate,
+          repeatInterval: updated.repeatInterval,
+        });
+      } catch (repeatError) {
+        console.error("❌ Error creating recurring reminder:", repeatError);
+        // לא נכשל אם החזרה לא עבדה
+      }
     }
 
     const message = isCompleted

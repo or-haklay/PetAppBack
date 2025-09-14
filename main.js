@@ -4,6 +4,9 @@ const mongoose = require("mongoose");
 const morgan = require("morgan");
 const errorLogger = require("./middleware/errorLogger");
 const { scheduleDailyMissions } = require("./utils/cron/dailyMissions");
+const {
+  scheduleReminderNotifications,
+} = require("./utils/cron/reminderNotifications");
 
 require("dotenv").config();
 
@@ -167,12 +170,15 @@ mongoose
   .connect(process.env.MONGO_URI)
   .then(() => {
     console.log("✅ Connected to MongoDB");
-    // Start cron after DB is ready
+    // Start cron jobs after DB is ready
     try {
       scheduleDailyMissions();
       console.log("⏰ Daily missions scheduler started");
+
+      scheduleReminderNotifications();
+      console.log("⏰ Reminder notifications scheduler started");
     } catch (e) {
-      console.error("Failed to start daily missions scheduler:", e);
+      console.error("Failed to start schedulers:", e);
     }
     app.listen(PORT, "0.0.0.0", () => {
       console.log(`🚀 Server is running on port ${PORT}`);
