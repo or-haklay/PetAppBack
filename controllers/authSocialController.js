@@ -16,8 +16,7 @@ function signAppToken(user) {
       name: user.name,
       email: user.email,
     },
-    process.env.JWT_KEY,
-    { expiresIn: "7d" }
+    process.env.JWT_KEY
   );
 }
 

@@ -167,8 +167,7 @@ const createUser = async (req, res, next) => {
         name: savedUser.name,
         email: savedUser.email,
       },
-      process.env.JWT_KEY,
-      { expiresIn: "7d" }
+      process.env.JWT_KEY
     );
     res.status(201).send({
       message: "User created",
@@ -237,8 +236,7 @@ const loginUser = async (req, res, next) => {
         name: user.name,
         email: user.email,
       },
-      process.env.JWT_KEY,
-      { expiresIn: "7d" }
+      process.env.JWT_KEY
     );
 
     res.send({
