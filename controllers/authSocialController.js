@@ -20,6 +20,28 @@ function signAppToken(user) {
   );
 }
 
+exports.googleCallback = async (req, res, next) => {
+  try {
+    const { code, state } = req.query;
+
+    if (!code) {
+      return res.status(400).json({ error: "Authorization code not provided" });
+    }
+
+    // Redirect back to the app with the authorization code
+    const redirectUrl = `hayotush://auth?code=${encodeURIComponent(
+      code
+    )}&state=${encodeURIComponent(state || "")}`;
+    res.redirect(redirectUrl);
+  } catch (error) {
+    console.error("[googleCallback] Error:", error);
+    const redirectUrl = `hayotush://auth?error=${encodeURIComponent(
+      error.message
+    )}`;
+    res.redirect(redirectUrl);
+  }
+};
+
 exports.googleOAuth = async (req, res, next) => {
   try {
     const {
@@ -27,29 +49,35 @@ exports.googleOAuth = async (req, res, next) => {
       redirectUri,
       codeVerifier,
       clientId: clientIdFromBody,
+      platform,
     } = req.body;
-    if (!code || !redirectUri) {
-      const error = new Error("Missing code or redirectUri");
+    if (!code || !redirectUri || !clientIdFromBody) {
+      const error = new Error("Missing code, redirectUri, or clientId");
       error.statusCode = 400;
       return next(error);
     }
 
     console.log("[googleOAuth] checks:", {
-      envClientIdTail: process.env.GOOGLE_WEB_CLIENT_ID?.slice(-20),
-      hasEnvSecret: !!process.env.GOOGLE_WEB_CLIENT_SECRET,
       clientIdFromBodyTail: clientIdFromBody?.slice(-20),
       redirectUri,
       hasCodeVerifier: !!codeVerifier,
+      platform,
     });
 
+    // Use the clientId from the request body instead of environment variable
+    // This allows different client IDs for different platforms (Android, iOS, Web, Expo Go)
     const params = new URLSearchParams({
       grant_type: "authorization_code",
       code,
       redirect_uri: redirectUri,
-      client_id: process.env.GOOGLE_WEB_CLIENT_ID,
+      client_id: clientIdFromBody,
       client_secret: process.env.GOOGLE_WEB_CLIENT_SECRET,
-      code_verifier: codeVerifier, // חובה עם PKCE
     });
+
+    // הוסף code_verifier רק אם הוא קיים (PKCE)
+    if (codeVerifier) {
+      params.append("code_verifier", codeVerifier);
+    }
 
     const tokenRes = await axios.post(
       GOOGLE_TOKEN_ENDPOINT,
@@ -67,7 +95,7 @@ exports.googleOAuth = async (req, res, next) => {
     const oAuthClient = new OAuth2Client();
     const ticket = await oAuthClient.verifyIdToken({
       idToken: id_token,
-      audience: process.env.GOOGLE_WEB_CLIENT_ID,
+      audience: clientIdFromBody, // Use the clientId from request
     });
     const payload = ticket.getPayload();
     if (!payload || payload.iss !== GOOGLE_ISS) {
