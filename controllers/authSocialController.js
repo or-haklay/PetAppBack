@@ -22,16 +22,22 @@ function signAppToken(user) {
 
 exports.googleCallback = async (req, res, next) => {
   try {
-    const { code, state } = req.query;
+    const { code, state, code_verifier } = req.query;
 
     if (!code) {
       return res.status(400).json({ error: "Authorization code not provided" });
     }
 
     // Redirect back to the app with the authorization code
-    const redirectUrl = `hayotush://auth?code=${encodeURIComponent(
+    let redirectUrl = `hayotush://auth?code=${encodeURIComponent(
       code
     )}&state=${encodeURIComponent(state || "")}`;
+
+    // Add code_verifier if available (for PKCE)
+    if (code_verifier) {
+      redirectUrl += `&code_verifier=${encodeURIComponent(code_verifier)}`;
+    }
+
     res.redirect(redirectUrl);
   } catch (error) {
     console.error("[googleCallback] Error:", error);
@@ -63,6 +69,7 @@ exports.googleOAuth = async (req, res, next) => {
       clientIdFromBodyTail: clientIdFromBody?.slice(-20),
       redirectUri,
       hasCodeVerifier: !!codeVerifier,
+      codeVerifierLength: codeVerifier ? codeVerifier.length : 0,
       platform,
     });
 
@@ -76,7 +83,7 @@ exports.googleOAuth = async (req, res, next) => {
       client_secret: process.env.GOOGLE_WEB_CLIENT_SECRET,
     });
 
-    // הוסף code_verifier רק אם הוא קיים (PKCE)
+    // Add PKCE parameters if available
     if (codeVerifier) {
       params.append("code_verifier", codeVerifier);
     }
@@ -87,6 +94,7 @@ exports.googleOAuth = async (req, res, next) => {
       redirect_uri: redirectUri,
       client_id: clientIdFromBody.substring(0, 20) + "...",
       client_secret: process.env.GOOGLE_WEB_CLIENT_SECRET ? "***" : "MISSING",
+      has_code_verifier: !!codeVerifier,
       full_params: params.toString(),
     });
 
