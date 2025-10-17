@@ -87,6 +87,7 @@ exports.googleOAuth = async (req, res, next) => {
       redirect_uri: redirectUri,
       client_id: clientIdFromBody.substring(0, 20) + "...",
       client_secret: process.env.GOOGLE_WEB_CLIENT_SECRET ? "***" : "MISSING",
+      full_params: params.toString(),
     });
 
     let tokenRes;
@@ -94,7 +95,10 @@ exports.googleOAuth = async (req, res, next) => {
       tokenRes = await axios.post(GOOGLE_TOKEN_ENDPOINT, params.toString(), {
         headers: { "Content-Type": "application/x-www-form-urlencoded" },
       });
-      console.log("[googleOAuth] Google response:", tokenRes.data);
+      console.log("[googleOAuth] Google response:", {
+        status: tokenRes.status,
+        data: tokenRes.data,
+      });
     } catch (error) {
       console.error("[googleOAuth] Google token request failed:", {
         status: error.response?.status,
