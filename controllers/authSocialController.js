@@ -44,6 +44,8 @@ exports.googleCallback = async (req, res, next) => {
 
 exports.googleOAuth = async (req, res, next) => {
   try {
+    console.log("[googleOAuth] Request body:", req.body);
+
     const {
       code,
       redirectUri,
@@ -79,14 +81,39 @@ exports.googleOAuth = async (req, res, next) => {
       params.append("code_verifier", codeVerifier);
     }
 
-    const tokenRes = await axios.post(
-      GOOGLE_TOKEN_ENDPOINT,
-      params.toString(),
-      { headers: { "Content-Type": "application/x-www-form-urlencoded" } }
-    );
+    console.log("[googleOAuth] Sending request to Google with params:", {
+      grant_type: "authorization_code",
+      code: code.substring(0, 20) + "...",
+      redirect_uri: redirectUri,
+      client_id: clientIdFromBody.substring(0, 20) + "...",
+      client_secret: process.env.GOOGLE_WEB_CLIENT_SECRET ? "***" : "MISSING",
+    });
+
+    let tokenRes;
+    try {
+      tokenRes = await axios.post(GOOGLE_TOKEN_ENDPOINT, params.toString(), {
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      });
+      console.log("[googleOAuth] Google response:", tokenRes.data);
+    } catch (error) {
+      console.error("[googleOAuth] Google token request failed:", {
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        data: error.response?.data,
+        message: error.message,
+      });
+      const authError = new Error(
+        `Google token request failed: ${
+          error.response?.data?.error || error.message
+        }`
+      );
+      authError.statusCode = 400;
+      return next(authError);
+    }
 
     const { id_token } = tokenRes.data || {};
     if (!id_token) {
+      console.error("[googleOAuth] No id_token in response:", tokenRes.data);
       const error = new Error("No id_token from Google");
       error.statusCode = 401;
       return next(error);
@@ -109,15 +136,35 @@ exports.googleOAuth = async (req, res, next) => {
     const name = payload.name || email || "Google User";
     const picture = payload.picture;
 
+    // Save calendar tokens if available
+    const { access_token, refresh_token, expires_in } = tokenRes.data || {};
+
     let user = await User.findOne({ $or: [{ googleId }, { email }] });
     if (!user) {
-      user = new User({ name, email, googleId, profilePicture: picture });
+      user = new User({
+        name,
+        email,
+        googleId,
+        profilePicture: picture,
+        googleCalendarAccessToken: access_token,
+        googleCalendarRefreshToken: refresh_token,
+        googleCalendarTokenExpiry: expires_in
+          ? new Date(Date.now() + expires_in * 1000)
+          : null,
+      });
       await user.save();
     } else {
       const set = {};
       if (!user.googleId) set.googleId = googleId;
       if (picture && user.profilePicture !== picture)
         set.profilePicture = picture;
+      if (access_token) set.googleCalendarAccessToken = access_token;
+      if (refresh_token) set.googleCalendarRefreshToken = refresh_token;
+      if (expires_in)
+        set.googleCalendarTokenExpiry = new Date(
+          Date.now() + expires_in * 1000
+        );
+
       if (Object.keys(set).length)
         await User.updateOne({ _id: user._id }, { $set: set });
     }
