@@ -101,6 +101,11 @@ exports.googleOAuth = async (req, res, next) => {
         statusText: error.response?.statusText,
         data: error.response?.data,
         message: error.message,
+        config: {
+          url: error.config?.url,
+          method: error.config?.method,
+          data: error.config?.data,
+        },
       });
       const authError = new Error(
         `Google token request failed: ${
