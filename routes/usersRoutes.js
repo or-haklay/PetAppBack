@@ -26,4 +26,12 @@ router.post("/update-consent", authMW, usersController.updateConsent);
 // Push notifications
 router.post("/push-token", authMW, usersController.updatePushToken);
 
+// Activity and notification preferences
+router.post("/activity", authMW, usersController.updateLastActivity);
+router.put(
+  "/notification-preferences",
+  authMW,
+  usersController.updateNotificationPreferences
+);
+
 module.exports = router;

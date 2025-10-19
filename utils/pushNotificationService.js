@@ -6,7 +6,13 @@ class PushNotificationService {
   }
 
   // שליחת התראה Push למשתמש יחיד
-  async sendPushNotification({ to, title, body, data = {} }) {
+  async sendPushNotification({
+    to,
+    title,
+    body,
+    data = {},
+    sound = "default",
+  }) {
     try {
       // בדיקה שהטוקן תקין
       if (!Expo.isExpoPushToken(to)) {
@@ -17,7 +23,7 @@ class PushNotificationService {
       // יצירת הודעה
       const message = {
         to,
-        sound: "default",
+        sound: sound,
         title,
         body,
         data,
@@ -124,6 +130,7 @@ class PushNotificationService {
       to: user.pushToken,
       title: `תזכורת: ${reminder.title}`,
       body: reminder.description || "זמן לתזכורת שלך!",
+      sound: "hayotush_notification",
       data: {
         type: "reminder",
         reminderId: reminder._id.toString(),
@@ -140,6 +147,7 @@ class PushNotificationService {
       to: user.pushToken,
       title: `רשומה רפואית: ${medicalRecord.title}`,
       body: medicalRecord.description || "רשומה רפואית חדשה",
+      sound: "hayotush_notification",
       data: {
         type: "medical",
         medicalRecordId: medicalRecord._id.toString(),
@@ -156,6 +164,7 @@ class PushNotificationService {
       to: user.pushToken,
       title: `הוצאה חדשה: ${expense.description}`,
       body: `סכום: ₪${expense.amount}`,
+      sound: "hayotush_notification",
       data: {
         type: "expense",
         expenseId: expense._id.toString(),

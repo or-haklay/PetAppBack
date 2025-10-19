@@ -609,6 +609,36 @@ const updatePushToken = async (req, res, next) => {
   }
 };
 
+const updateLastActivity = async (req, res) => {
+  try {
+    await User.updateOne(
+      { _id: req.user._id },
+      { lastAppActivity: new Date() }
+    );
+    res.json({ success: true });
+  } catch (error) {
+    console.error("Error updating activity:", error);
+    res.status(500).json({ message: "שגיאה בעדכון פעילות" });
+  }
+};
+
+const updateNotificationPreferences = async (req, res) => {
+  try {
+    const { engagementNotificationsEnabled } = req.body;
+
+    await User.updateOne(
+      { _id: req.user._id },
+      {
+        engagementNotificationsEnabled: engagementNotificationsEnabled ?? true,
+      }
+    );
+
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ message: "שגיאה בעדכון העדפות" });
+  }
+};
+
 module.exports = {
   getAllUsers,
   getUserById,
@@ -622,4 +652,6 @@ module.exports = {
   getConsentStatus,
   updateConsent,
   updatePushToken,
+  updateLastActivity,
+  updateNotificationPreferences,
 };

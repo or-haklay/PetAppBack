@@ -42,9 +42,16 @@ exports.listArticles = async (req, res) => {
       level,
       ageStage,
       tags,
+      includeUnpublished = false, // New parameter for admin
     } = req.query;
 
-    const filter = { published: true };
+    const filter = {};
+
+    // Only show published articles unless admin requests unpublished
+    if (!includeUnpublished) {
+      filter.published = true;
+    }
+
     if (category) filter.categoryKey = category;
     if (level) filter.level = level;
     if (ageStage) filter.ageStages = ageStage;
@@ -70,7 +77,9 @@ exports.listArticles = async (req, res) => {
         .sort(sortSpec)
         .skip(skip)
         .limit(Number(pageSize))
-        .select("slug title summary heroImage tags readingTimeMin updatedAt")
+        .select(
+          "slug title summary heroImage tags readingTimeMin updatedAt published categoryKey"
+        )
         .lean(),
       ContentArticle.countDocuments(filter),
     ]);

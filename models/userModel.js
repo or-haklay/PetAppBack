@@ -47,6 +47,9 @@ const userSchema = new mongoose.Schema(
     // Push Notifications
     pushToken: { type: String }, // Expo push token להתראות
     pushNotificationsEnabled: { type: Boolean, default: true }, // האם התראות מופעלות
+    lastAppActivity: { type: Date, default: Date.now },
+    lastEngagementNotification: { type: Date },
+    engagementNotificationsEnabled: { type: Boolean, default: true },
 
     subscriptionPlan: {
       type: String,

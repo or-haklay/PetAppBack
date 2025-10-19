@@ -7,6 +7,10 @@ const { scheduleDailyMissions } = require("./utils/cron/dailyMissions");
 const {
   scheduleReminderNotifications,
 } = require("./utils/cron/reminderNotifications");
+const {
+  scheduleEngagementNotifications,
+  scheduleNotificationChecks,
+} = require("./utils/cron/engagementCron");
 
 require("dotenv").config();
 
@@ -15,6 +19,21 @@ console.log(`🌍 NODE_ENV: ${process.env.NODE_ENV || "development"}`);
 console.log(`🔗 MONGO_URI: ${process.env.MONGO_URI ? "✅ מוגדר" : "❌ חסר"}`);
 console.log(`🔑 AWS_REGION: ${process.env.AWS_REGION || "❌ חסר"}`);
 console.log(`📦 AWS_S3_BUCKET: ${process.env.AWS_S3_BUCKET || "❌ חסר"}`);
+
+// הגדרת ADMIN_KEY אם לא קיים
+if (!process.env.ADMIN_KEY) {
+  // ב-production - תמיד הגדר ADMIN_KEY ב-environment variables!
+  if (process.env.NODE_ENV === "production") {
+    console.error(
+      "❌ ADMIN_KEY לא מוגדר ב-production! הגדר אותו ב-environment variables"
+    );
+    process.exit(1);
+  }
+  process.env.ADMIN_KEY = "hayotush_admin_2024_secure_key_change_this";
+  console.log("🔐 ADMIN_KEY: הוגדר ברירת מחדל (שינוי מומלץ!)");
+} else {
+  console.log("🔐 ADMIN_KEY: ✅ מוגדר");
+}
 
 const app = express();
 app.use(cors());
@@ -93,6 +112,9 @@ app.use("/api/calendar", require("./routes/calendarRoutes"));
 
 app.use("/api/upload", require("./routes/uploadRoutes"));
 app.use("/api/content", require("./routes/contentRoutes"));
+
+// Admin routes
+app.use("/api/admin", require("./routes/adminRoutes"));
 
 // Health check endpoint
 app.get("/health", (req, res) => {
@@ -177,6 +199,12 @@ mongoose
 
       scheduleReminderNotifications();
       console.log("⏰ Reminder notifications scheduler started");
+
+      scheduleEngagementNotifications();
+      console.log("⏰ Engagement notifications scheduler started");
+
+      scheduleNotificationChecks();
+      console.log("⏰ Scheduled notifications checker started");
     } catch (e) {
       console.error("Failed to start schedulers:", e);
     }

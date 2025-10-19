@@ -18,7 +18,7 @@ const notificationSchema = new mongoose.Schema(
     },
     type: {
       type: String,
-      enum: ["reminder", "medical", "expense", "general"],
+      enum: ["reminder", "medical", "expense", "general", "tip", "engagement"],
       default: "general",
     },
     relatedId: {
@@ -40,6 +40,10 @@ const notificationSchema = new mongoose.Schema(
       type: String,
       enum: ["low", "medium", "high"],
       default: "medium",
+    },
+    sound: {
+      type: String,
+      default: "default",
     },
   },
   { timestamps: true }
