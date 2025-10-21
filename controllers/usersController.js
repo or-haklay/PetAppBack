@@ -119,9 +119,9 @@ const createUser = async (req, res, next) => {
       return next(validationError);
     }
 
-    if (!newUser.password && !newUser.googleId && !newUser.facebookId) {
+    if (!newUser.password && !newUser.googleId) {
       const validationError = new Error(
-        "Password or social login ID is required"
+        "Password or Google login ID is required"
       );
       validationError.statusCode = 400;
       return next(validationError);
@@ -639,6 +639,27 @@ const updateNotificationPreferences = async (req, res) => {
   }
 };
 
+const getSocialConnections = async (req, res, next) => {
+  try {
+    const user = req.user;
+
+    const connections = {
+      google: {
+        connected: !!user.googleId,
+        email: user.googleId ? user.email : null,
+        calendarEnabled: user.googleCalendarEnabled || false,
+      },
+    };
+
+    res.json(connections);
+  } catch (error) {
+    console.error("Error getting social connections:", error);
+    const dbError = new Error("Failed to get social connections");
+    dbError.statusCode = 500;
+    return next(dbError);
+  }
+};
+
 module.exports = {
   getAllUsers,
   getUserById,
@@ -654,4 +675,5 @@ module.exports = {
   updatePushToken,
   updateLastActivity,
   updateNotificationPreferences,
+  getSocialConnections,
 };

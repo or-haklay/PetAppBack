@@ -33,9 +33,17 @@ class GoogleCalendarService {
       // תאריך סיום (שעה אחרי)
       const endDateTime = new Date(startDateTime.getTime() + 60 * 60 * 1000);
 
+      // יצירת תיאור מפורט עם הערות
+      let description = "";
+      if (reminder.description) {
+        description += `📝 הערות: ${reminder.description}\n\n`;
+      }
+      description += `🐾 אפליקציה: Hayotush\n`;
+      description += `📅 נוצר: ${new Date().toLocaleDateString("he-IL")}\n`;
+
       const event = {
         summary: reminder.title,
-        description: reminder.description || "",
+        description: description,
         start: {
           dateTime: startDateTime.toISOString(),
           timeZone: reminder.timezone || "Asia/Jerusalem",
@@ -47,7 +55,8 @@ class GoogleCalendarService {
         reminders: {
           useDefault: false,
           overrides: [
-            { method: "popup", minutes: 15 }, // תזכורת 15 דקות לפני
+            { method: "popup", minutes: 60 }, // תזכורת שעה לפני
+            { method: "email", minutes: 60 }, // תזכורת אימייל שעה לפני
           ],
         },
         // הוספת מידע על החיה
@@ -99,9 +108,17 @@ class GoogleCalendarService {
       // תאריך סיום (שעה אחרי)
       const endDateTime = new Date(startDateTime.getTime() + 60 * 60 * 1000);
 
+      // יצירת תיאור מפורט עם הערות
+      let description = "";
+      if (reminder.description) {
+        description += `📝 הערות: ${reminder.description}\n\n`;
+      }
+      description += `🐾 אפליקציה: Hayotush\n`;
+      description += `📅 עודכן: ${new Date().toLocaleDateString("he-IL")}\n`;
+
       const event = {
         summary: reminder.title,
-        description: reminder.description || "",
+        description: description,
         start: {
           dateTime: startDateTime.toISOString(),
           timeZone: reminder.timezone || "Asia/Jerusalem",
@@ -112,7 +129,10 @@ class GoogleCalendarService {
         },
         reminders: {
           useDefault: false,
-          overrides: [{ method: "popup", minutes: 15 }],
+          overrides: [
+            { method: "popup", minutes: 60 }, // תזכורת שעה לפני
+            { method: "email", minutes: 60 }, // תזכורת אימייל שעה לפני
+          ],
         },
         extendedProperties: {
           private: {

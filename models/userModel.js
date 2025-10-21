@@ -11,7 +11,6 @@ const userSchema = new mongoose.Schema(
     password: { type: String, select: false },
 
     googleId: { type: String },
-    facebookId: { type: String },
 
     // Terms and Privacy Policy consent
     termsAccepted: {
@@ -179,7 +178,7 @@ userSchema.methods.updatePassword = async function (newPassword) {
 };
 
 userSchema.methods.isSocialUser = function () {
-  return !!(this.googleId || this.facebookId);
+  return !!this.googleId;
 };
 
 userSchema.methods.hasPassword = function () {

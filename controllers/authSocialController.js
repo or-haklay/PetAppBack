@@ -119,11 +119,19 @@ exports.googleOAuth = async (req, res, next) => {
           data: error.config?.data,
         },
       });
-      const authError = new Error(
-        `Google token request failed: ${
-          error.response?.data?.error || error.message
-        }`
-      );
+
+      // Handle specific Google OAuth errors
+      let errorMessage = "Google authentication failed";
+      if (error.response?.data?.error === "invalid_grant") {
+        errorMessage =
+          "Authorization code expired or invalid. Please try logging in again.";
+      } else if (error.response?.data?.error === "invalid_client") {
+        errorMessage = "Invalid client configuration. Please contact support.";
+      } else if (error.response?.data?.error) {
+        errorMessage = `Google OAuth error: ${error.response.data.error}`;
+      }
+
+      const authError = new Error(errorMessage);
       authError.statusCode = 400;
       return next(authError);
     }
@@ -203,5 +211,67 @@ exports.googleOAuth = async (req, res, next) => {
     const googleError = new Error("Google OAuth failed");
     googleError.statusCode = 500;
     return next(googleError);
+  }
+};
+
+exports.getGoogleAuthUrl = async (req, res, next) => {
+  try {
+    // Generate Google OAuth URL for connecting existing account
+    const clientId = process.env.GOOGLE_WEB_CLIENT_ID;
+    const redirectUri = `${
+      process.env.BASE_URL || "http://localhost:3000"
+    }/auth/google/callback`;
+    const scope =
+      "openid email profile https://www.googleapis.com/auth/calendar";
+    const state = "connect_account"; // Different state for connecting vs login
+
+    const authUrl =
+      `https://accounts.google.com/o/oauth2/v2/auth?` +
+      `client_id=${clientId}&` +
+      `redirect_uri=${encodeURIComponent(redirectUri)}&` +
+      `scope=${encodeURIComponent(scope)}&` +
+      `response_type=code&` +
+      `state=${state}&` +
+      `access_type=offline&` +
+      `prompt=consent`;
+
+    res.json({ authUrl });
+  } catch (error) {
+    console.error("Error generating Google auth URL:", error);
+    const authError = new Error("Failed to generate Google auth URL");
+    authError.statusCode = 500;
+    return next(authError);
+  }
+};
+
+exports.connectGoogle = async (req, res, next) => {
+  try {
+    // This would handle connecting Google to existing account
+    // For now, return a placeholder response
+    res.json({
+      success: true,
+      message: "Google connection feature coming soon",
+    });
+  } catch (error) {
+    console.error("Error connecting Google:", error);
+    const authError = new Error("Failed to connect Google account");
+    authError.statusCode = 500;
+    return next(authError);
+  }
+};
+
+exports.disconnectGoogle = async (req, res, next) => {
+  try {
+    // This would handle disconnecting Google from account
+    // For now, return a placeholder response
+    res.json({
+      success: true,
+      message: "Google disconnection feature coming soon",
+    });
+  } catch (error) {
+    console.error("Error disconnecting Google:", error);
+    const authError = new Error("Failed to disconnect Google account");
+    authError.statusCode = 500;
+    return next(authError);
   }
 };
