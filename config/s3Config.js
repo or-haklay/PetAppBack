@@ -149,7 +149,7 @@ const s3Storage = multer.memoryStorage();
 const upload = multer({
   storage: s3Storage,
   limits: {
-    fileSize: 10 * 1024 * 1024, // 10MB מקסימום
+    fileSize: 20 * 1024 * 1024, // 20MB מקסימום (הוגדל מ-10MB)
   },
   fileFilter: (req, file, cb) => {
     console.log(

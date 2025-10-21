@@ -9,28 +9,28 @@ const multer = require("multer");
 const handleMulterError = (error, req, res, next) => {
   if (error instanceof multer.MulterError) {
     console.error(`❌ Multer Error:`, error);
-    
-    if (error.code === 'LIMIT_FILE_SIZE') {
+
+    if (error.code === "LIMIT_FILE_SIZE") {
       return res.status(400).json({
         success: false,
-        message: 'הקובץ גדול מדי. הגודל המקסימלי הוא 10MB'
+        message: "הקובץ גדול מדי. הגודל המקסימלי הוא 20MB",
       });
     }
-    
+
     return res.status(400).json({
       success: false,
-      message: `שגיאה בהעלאת הקובץ: ${error.message}`
+      message: `שגיאה בהעלאת הקובץ: ${error.message}`,
     });
   }
-  
+
   if (error) {
     console.error(`❌ Upload Error:`, error);
     return res.status(400).json({
       success: false,
-      message: error.message || 'שגיאה בהעלאת הקובץ'
+      message: error.message || "שגיאה בהעלאת הקובץ",
     });
   }
-  
+
   next();
 };
 

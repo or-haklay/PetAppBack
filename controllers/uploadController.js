@@ -25,9 +25,9 @@ module.exports = {
         return next(error);
       }
 
-      if (req.file.size > 10 * 1024 * 1024) {
-        // 10MB
-        const error = new Error("הקובץ גדול מדי. הגודל המקסימלי הוא 10MB");
+      if (req.file.size > 20 * 1024 * 1024) {
+        // 20MB
+        const error = new Error("הקובץ גדול מדי. הגודל המקסימלי הוא 20MB");
         error.status = 400;
         error.requestId = req.requestId;
         return next(error);
@@ -104,9 +104,9 @@ module.exports = {
         return next(error);
       }
 
-      if (req.file.size > 10 * 1024 * 1024) {
-        // 10MB
-        const error = new Error("הקובץ גדול מדי. הגודל המקסימלי הוא 10MB");
+      if (req.file.size > 20 * 1024 * 1024) {
+        // 20MB
+        const error = new Error("הקובץ גדול מדי. הגודל המקסימלי הוא 20MB");
         error.status = 400;
         error.requestId = req.requestId;
         return next(error);
@@ -183,9 +183,9 @@ module.exports = {
         return next(error);
       }
 
-      if (req.file.size > 10 * 1024 * 1024) {
-        // 10MB
-        const error = new Error("הקובץ גדול מדי. הגודל המקסימלי הוא 10MB");
+      if (req.file.size > 20 * 1024 * 1024) {
+        // 20MB
+        const error = new Error("הקובץ גדול מדי. הגודל המקסימלי הוא 20MB");
         error.status = 400;
         error.requestId = req.requestId;
         return next(error);
@@ -262,9 +262,9 @@ module.exports = {
         return next(error);
       }
 
-      if (req.file.size > 10 * 1024 * 1024) {
-        // 10MB
-        const error = new Error("הקובץ גדול מדי. הגודל המקסימלי הוא 10MB");
+      if (req.file.size > 20 * 1024 * 1024) {
+        // 20MB
+        const error = new Error("הקובץ גדול מדי. הגודל המקסימלי הוא 20MB");
         error.status = 400;
         error.requestId = req.requestId;
         return next(error);
