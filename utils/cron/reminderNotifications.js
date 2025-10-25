@@ -25,16 +25,15 @@ async function sendReminderNotifications() {
     );
 
     const now = new Date();
-    const fiveMinutesFromNow = new Date(now.getTime() + 5 * 60 * 1000); // 5 דקות קדימה
+    const oneHourFromNow = new Date(now.getTime() + 60 * 60 * 1000); // שעה קדימה
 
-    // מציאת התראות שצריכות להישלח
+    // מציאת התראות שצריכות להישלח - כולל עבר ועתיד קרוב
     const notificationsToSend = await Notification.find({
       type: "reminder",
       isRead: false,
       isDeleted: false,
       scheduledFor: {
-        $gte: now,
-        $lte: fiveMinutesFromNow,
+        $lte: oneHourFromNow, // כל התראות עד שעה קדימה
       },
     })
       .populate("userId", "email firstName lastName pushToken")
@@ -49,17 +48,26 @@ async function sendReminderNotifications() {
 
     for (const notification of notificationsToSend) {
       try {
+        const notificationTime = new Date(notification.scheduledFor);
+        const isOverdue = notificationTime < now;
+
         // שליחת התראה Push (אם זמין)
         const pushService = await getPushNotificationService();
         if (pushService && notification.userId?.pushToken) {
+          // אם ההתראה עברה, הוסף "איחור" לכותרת
+          const title = isOverdue
+            ? `⏰ ${notification.title} (איחור)`
+            : notification.title;
+
           await pushService.sendPushNotification({
             to: notification.userId.pushToken,
-            title: notification.title,
+            title: title,
             body: notification.message,
             data: {
               type: "reminder",
               reminderId: notification.relatedId,
               notificationId: notification._id,
+              isOverdue: isOverdue,
             },
           });
         }
@@ -72,7 +80,9 @@ async function sendReminderNotifications() {
 
         sentCount++;
         console.log(
-          `[CRON] Sent notification for reminder ${notification.relatedId} to user ${notification.userId._id}`
+          `[CRON] Sent notification for reminder ${
+            notification.relatedId
+          } to user ${notification.userId._id}${isOverdue ? " (OVERDUE)" : ""}`
         );
       } catch (error) {
         errorCount++;
@@ -85,6 +95,9 @@ async function sendReminderNotifications() {
 
     console.log(
       `[CRON] Reminder notifications completed: ${sentCount} sent, ${errorCount} errors`
+    );
+    console.log(
+      `[CRON] Time range: ${now.toISOString()} to ${oneHourFromNow.toISOString()}`
     );
   } catch (error) {
     console.error("[CRON] Error in sendReminderNotifications:", error);
