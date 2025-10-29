@@ -58,7 +58,89 @@ exports.googleOAuth = async (req, res, next) => {
       codeVerifier,
       clientId: clientIdFromBody,
       platform,
+      idToken, // For native Google Sign-In
     } = req.body;
+
+    // Handle native Google Sign-In with idToken directly (only if no authorization code)
+    if (idToken && !code) {
+      console.log("[googleOAuth] Using native idToken authentication");
+      
+      if (!idToken) {
+        const error = new Error("Missing idToken");
+        error.statusCode = 400;
+        return next(error);
+      }
+
+      // idToken is always created for the Web Client ID (from GoogleSignin.configure)
+      // So we need to verify it against the Web Client ID, not the platform-specific one
+      const webClientId = process.env.GOOGLE_WEB_CLIENT_ID;
+      if (!webClientId) {
+        const error = new Error("Web Client ID not configured");
+        error.statusCode = 500;
+        return next(error);
+      }
+
+      // Verify the idToken directly against the Web Client ID
+      const oAuthClient = new OAuth2Client();
+      let ticket;
+      try {
+        ticket = await oAuthClient.verifyIdToken({
+          idToken: idToken,
+          audience: webClientId, // Use Web Client ID, not the platform-specific one
+        });
+      } catch (verifyError) {
+        console.error("[googleOAuth] idToken verification failed:", verifyError);
+        const error = new Error("Invalid Google idToken");
+        error.statusCode = 401;
+        return next(error);
+      }
+
+      const payload = ticket.getPayload();
+      if (!payload || payload.iss !== GOOGLE_ISS) {
+        const error = new Error("Invalid Google token");
+        error.statusCode = 401;
+        return next(error);
+      }
+
+      const googleId = payload.sub;
+      const email = (payload.email || "").toLowerCase();
+      const name = payload.name || email || "Google User";
+      const picture = payload.picture;
+
+      let user = await User.findOne({ $or: [{ googleId }, { email }] });
+      if (!user) {
+        user = new User({
+          name,
+          email,
+          googleId,
+          profilePicture: picture,
+        });
+        await user.save();
+      } else {
+        const set = {};
+        if (!user.googleId) set.googleId = googleId;
+        if (picture && user.profilePicture !== picture)
+          set.profilePicture = picture;
+
+        if (Object.keys(set).length)
+          await User.updateOne({ _id: user._id }, { $set: set });
+      }
+
+      const token = signAppToken(user);
+      return res.json({
+        message: "Google login OK",
+        token,
+        user: _.pick(user, [
+          "_id",
+          "name",
+          "email",
+          "profilePicture",
+          "subscriptionPlan",
+        ]),
+      });
+    }
+
+    // Original flow with authorization code
     if (!code || !redirectUri || !clientIdFromBody) {
       const error = new Error("Missing code, redirectUri, or clientId");
       error.statusCode = 400;
@@ -73,13 +155,24 @@ exports.googleOAuth = async (req, res, next) => {
       platform,
     });
 
-    // Use the clientId from the request body instead of environment variable
-    // This allows different client IDs for different platforms (Android, iOS, Web, Expo Go)
+    // For serverAuthCode (redirectUri="postmessage"), we must use Web Client ID
+    // because serverAuthCode is created for the Web Client ID in GoogleSignin.configure
+    const webClientId = process.env.GOOGLE_WEB_CLIENT_ID;
+    const effectiveClientId = redirectUri === "postmessage" ? webClientId : clientIdFromBody;
+
+    console.log("[googleOAuth] Using client ID:", {
+      original: clientIdFromBody?.slice(-20),
+      effective: effectiveClientId?.slice(-20),
+      redirectUri,
+      isServerAuthCode: redirectUri === "postmessage"
+    });
+
+    // Use the effective client ID for token exchange
     const params = new URLSearchParams({
       grant_type: "authorization_code",
       code,
       redirect_uri: redirectUri,
-      client_id: clientIdFromBody,
+      client_id: effectiveClientId,
       client_secret: process.env.GOOGLE_WEB_CLIENT_SECRET,
     });
 
@@ -145,9 +238,12 @@ exports.googleOAuth = async (req, res, next) => {
     }
 
     const oAuthClient = new OAuth2Client();
+    // For verification, use Web Client ID for serverAuthCode, or original clientId for regular OAuth
+    const verificationWebClientId = process.env.GOOGLE_WEB_CLIENT_ID;
+    const verificationClientId = redirectUri === "postmessage" ? verificationWebClientId : clientIdFromBody;
     const ticket = await oAuthClient.verifyIdToken({
       idToken: id_token,
-      audience: clientIdFromBody, // Use the clientId from request
+      audience: verificationClientId,
     });
     const payload = ticket.getPayload();
     if (!payload || payload.iss !== GOOGLE_ISS) {

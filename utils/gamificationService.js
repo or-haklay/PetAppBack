@@ -12,7 +12,7 @@ async function ensureDailyMissions(userId, dateKey = getILDateKey()) {
   let daily = await UserDailyMission.findOne({ userId, dateKey });
   if (daily) return daily;
 
-  const KEYS = ["SEARCH_PET_STORE", "READ_ARTICLE", "OPEN_EXPENSES_SUMMARY"];
+  const KEYS = ["SEARCH_PET_STORE", "READ_ARTICLE", "OPEN_EXPENSES_SUMMARY", "DAILY_WALK"];
   const templates = await MissionTemplate.find({ key: { $in: KEYS } })
     .sort({ key: 1 })
     .lean();

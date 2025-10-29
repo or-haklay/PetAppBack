@@ -24,18 +24,12 @@ if (missingEnvVars.length > 0) {
   missingEnvVars.forEach((envVar) => {
     console.error(`   ${envVar}=your_value_here`);
   });
-  process.exit(1);
+  // Don't exit - continue without S3
+  console.warn("⚠️ ממשיך ללא S3 - העלאת קבצים לא תעבוד");
+} else {
+  console.log(`✅ כל ה-environment variables הנדרשים מוגדרים`);
+  console.log(`✅ AWS_S3_BUCKET: "${process.env.AWS_S3_BUCKET}"`);
 }
-
-// בדיקה נוספת שה-bucket לא ריק
-if (!process.env.AWS_S3_BUCKET || process.env.AWS_S3_BUCKET.trim() === "") {
-  console.error(`❌ AWS_S3_BUCKET מוגדר אבל ריק או מכיל רק רווחים`);
-  console.error(`❌ ערך נוכחי: "${process.env.AWS_S3_BUCKET}"`);
-  process.exit(1);
-}
-
-console.log(`✅ כל ה-environment variables הנדרשים מוגדרים`);
-console.log(`✅ AWS_S3_BUCKET: "${process.env.AWS_S3_BUCKET}"`);
 
 // הגדרת AWS S3 Client v3
 console.log(`🔧 מאתחל S3 Client...`);

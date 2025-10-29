@@ -1,7 +1,7 @@
 // controllers/placesController.js
 // Proxy endpoints for Google Places (New) with field masks, caching, curated pet categories
 
-const { post, get, setCache, getCache } = require("../utils/googlePlaces");
+const { post, get, setCache, getCache, detectWalkPOIs } = require("../utils/googlePlaces");
 
 // --- Field masks (lean responses) ---
 const LIST_FIELD_MASK = [
@@ -666,6 +666,29 @@ exports.details = async (req, res) => {
       error: "Places details failed",
       status,
       data,
+    });
+  }
+};
+
+/**
+ * GET /api/places/nearby?lat=...&lng=...&radius=...
+ * For walk tracking POI detection
+ */
+exports.nearby = async (req, res) => {
+  try {
+    const { lat, lng, radius = 100 } = req.query;
+    
+    if (!lat || !lng) {
+      return res.status(400).json({ error: "lat and lng are required" });
+    }
+    
+    const pois = await detectWalkPOIs(+lat, +lng, +radius);
+    return res.json({ pois });
+  } catch (err) {
+    console.error("❌ Nearby POIs error:", err);
+    return res.status(500).json({
+      error: "Failed to fetch nearby POIs",
+      message: err?.message,
     });
   }
 };

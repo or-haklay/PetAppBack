@@ -12,4 +12,7 @@ router.get("/details/:placeId", ctrl.details);
 // /api/places/photo?name=places/.../photos/...&maxWidthPx=800
 router.get("/photo", ctrl.photo);
 
+// /api/places/nearby?lat=...&lng=...&radius=... (for walk tracking POI detection)
+router.get("/nearby", ctrl.nearby);
+
 module.exports = router;

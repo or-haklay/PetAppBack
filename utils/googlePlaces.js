@@ -83,9 +83,130 @@ async function get(path, fieldMask, sessionToken, params = {}) {
   }
 }
 
+/**
+ * Detect POIs near a location for walk tracking
+ * @param {number} lat - Latitude
+ * @param {number} lng - Longitude
+ * @param {number} radius - Search radius in meters (default: 100)
+ * @returns {Array} Array of POIs relevant for pet walks
+ */
+async function detectWalkPOIs(lat, lng, radius = 100) {
+  const cacheKey = `walk_pois_${lat}_${lng}_${radius}`;
+  const cached = getCache(cacheKey);
+  if (cached) return cached;
+
+  try {
+    const response = await post("/places:searchNearby", {
+      includedTypes: [
+        "park",
+        "veterinary_care",
+        "pet_store"
+      ],
+      maxResultCount: 10,
+      locationRestriction: {
+        circle: {
+          center: { latitude: lat, longitude: lng },
+          radius: radius
+        }
+      }
+    }, "places.displayName,places.types,places.location,places.id");
+
+    if (response.status !== 200) {
+      console.error("❌ Google Places search error:", response.status, response.data);
+      return [];
+    }
+
+    const pois = response.data.places?.map(place => ({
+      type: mapGoogleTypeToWalkType(place.types),
+      name: place.displayName?.text || "Unknown",
+      placeId: place.id,
+      location: {
+        lat: place.location?.latitude || lat,
+        lng: place.location?.longitude || lng
+      }
+    })).filter(poi => poi.type !== null) || [];
+
+    setCache(cacheKey, pois, 30 * 60 * 1000); // Cache for 30 minutes
+    return pois;
+
+  } catch (error) {
+    console.error("❌ Error detecting walk POIs:", error.message);
+    return [];
+  }
+}
+
+/**
+ * Map Google Places types to walk POI types
+ * @param {Array} googleTypes - Google Places types
+ * @returns {string|null} Walk POI type or null if not relevant
+ */
+function mapGoogleTypeToWalkType(googleTypes) {
+  if (!googleTypes || !Array.isArray(googleTypes)) return null;
+
+  const typeMap = {
+    'park': 'park',
+    'veterinary_care': 'vet',
+    'pet_store': 'pet_store'
+  };
+
+  for (const googleType of googleTypes) {
+    if (typeMap[googleType]) {
+      return typeMap[googleType];
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Get POI details by place ID
+ * @param {string} placeId - Google Place ID
+ * @returns {Object|null} POI details
+ */
+async function getPOIDetails(placeId) {
+  const cacheKey = `poi_details_${placeId}`;
+  const cached = getCache(cacheKey);
+  if (cached) return cached;
+
+  try {
+    const response = await get(`/places/${placeId}`,
+      "id,displayName,types,location,formattedAddress,rating,userRatingCount"
+    );
+
+    if (response.status !== 200) {
+      console.error("❌ Google Places details error:", response.status, response.data);
+      return null;
+    }
+
+    const place = response.data;
+    const poiDetails = {
+      placeId: place.id,
+      name: place.displayName?.text || "Unknown",
+      type: mapGoogleTypeToWalkType(place.types),
+      location: {
+        lat: place.location?.latitude || 0,
+        lng: place.location?.longitude || 0
+      },
+      address: place.formattedAddress || "",
+      rating: place.rating || 0,
+      ratingCount: place.userRatingCount || 0
+    };
+
+    setCache(cacheKey, poiDetails, 60 * 60 * 1000); // Cache for 1 hour
+    return poiDetails;
+
+  } catch (error) {
+    console.error("❌ Error getting POI details:", error.message);
+    return null;
+  }
+}
+
 module.exports = {
   post,
   get,
   setCache,
   getCache,
+  detectWalkPOIs,
+  mapGoogleTypeToWalkType,
+  getPOIDetails,
 };

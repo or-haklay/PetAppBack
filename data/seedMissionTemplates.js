@@ -32,6 +32,39 @@ const templates = [
     eventKey: "OPEN_EXPENSES_SUMMARY",
     maxPerDay: 1,
   },
+  // Walk-related missions
+  {
+    key: "DAILY_WALK",
+    title: "צא לטיול יומי",
+    difficulty: "easy",
+    points: 10,
+    eventKey: "WALK_COMPLETED",
+    maxPerDay: 1,
+  },
+  {
+    key: "WALK_DISTANCE_1KM",
+    title: "טיול של קילומטר",
+    difficulty: "medium",
+    points: 15,
+    eventKey: "WALK_DISTANCE_1KM",
+    maxPerDay: 3,
+  },
+  {
+    key: "WALK_STREAK_3",
+    title: "3 טיולים רצופים",
+    difficulty: "hard",
+    points: 30,
+    eventKey: "WALK_STREAK_3",
+    maxPerDay: 1,
+  },
+  {
+    key: "EXPLORE_NEW_POI",
+    title: "גלה מקום חדש",
+    difficulty: "medium",
+    points: 20,
+    eventKey: "EXPLORE_NEW_POI",
+    maxPerDay: 2,
+  },
 ];
 
 (async () => {

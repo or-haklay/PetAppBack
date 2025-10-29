@@ -12,7 +12,24 @@ const {
   scheduleNotificationChecks,
 } = require("./utils/cron/engagementCron");
 
-require("dotenv").config();
+// Load environment variables
+const path = require("path");
+const dotenv = require("dotenv");
+const fs = require("fs");
+const envPath = path.join(__dirname, ".env");
+console.log(`🔧 Loading .env from: ${envPath}`);
+console.log(`🔧 File exists: ${fs.existsSync(envPath)}`);
+if (fs.existsSync(envPath)) {
+  const content = fs.readFileSync(envPath, 'utf8');
+  console.log(`📄 File content:`, content);
+}
+const result = dotenv.config({ path: envPath });
+if (result.error) {
+  console.error("❌ Error loading .env:", result.error);
+} else {
+  console.log(`✅ Loaded ${Object.keys(result.parsed || {}).length} environment variables`);
+  console.log(`📋 Parsed variables:`, result.parsed);
+}
 
 console.log(`🚀 מאתחל שרת...`);
 console.log(`🌍 NODE_ENV: ${process.env.NODE_ENV || "development"}`);
@@ -109,6 +126,7 @@ app.use("/api/gamification", require("./routes/gamificationRoutes"));
 
 app.use("/api/places", require("./routes/placesRoutes"));
 app.use("/api/calendar", require("./routes/calendarRoutes"));
+app.use("/api/walks", require("./routes/walksRoutes"));
 
 app.use("/api/upload", require("./routes/uploadRoutes"));
 app.use("/api/content", require("./routes/contentRoutes"));
