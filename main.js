@@ -17,25 +17,11 @@ const path = require("path");
 const dotenv = require("dotenv");
 const fs = require("fs");
 const envPath = path.join(__dirname, ".env");
-console.log(`🔧 Loading .env from: ${envPath}`);
-console.log(`🔧 File exists: ${fs.existsSync(envPath)}`);
-if (fs.existsSync(envPath)) {
-  const content = fs.readFileSync(envPath, 'utf8');
-  console.log(`📄 File content:`, content);
-}
 const result = dotenv.config({ path: envPath });
 if (result.error) {
-  console.error("❌ Error loading .env:", result.error);
-} else {
-  console.log(`✅ Loaded ${Object.keys(result.parsed || {}).length} environment variables`);
-  console.log(`📋 Parsed variables:`, result.parsed);
+  console.error("Error loading .env:", result.error);
 }
 
-console.log(`🚀 מאתחל שרת...`);
-console.log(`🌍 NODE_ENV: ${process.env.NODE_ENV || "development"}`);
-console.log(`🔗 MONGO_URI: ${process.env.MONGO_URI ? "✅ מוגדר" : "❌ חסר"}`);
-console.log(`🔑 AWS_REGION: ${process.env.AWS_REGION || "❌ חסר"}`);
-console.log(`📦 AWS_S3_BUCKET: ${process.env.AWS_S3_BUCKET || "❌ חסר"}`);
 
 // הגדרת ADMIN_KEY אם לא קיים
 if (!process.env.ADMIN_KEY) {
@@ -47,9 +33,6 @@ if (!process.env.ADMIN_KEY) {
     process.exit(1);
   }
   process.env.ADMIN_KEY = "hayotush_admin_2024_secure_key_change_this";
-  console.log("🔐 ADMIN_KEY: הוגדר ברירת מחדל (שינוי מומלץ!)");
-} else {
-  console.log("🔐 ADMIN_KEY: ✅ מוגדר");
 }
 
 const app = express();
@@ -130,6 +113,7 @@ app.use("/api/walks", require("./routes/walksRoutes"));
 
 app.use("/api/upload", require("./routes/uploadRoutes"));
 app.use("/api/content", require("./routes/contentRoutes"));
+app.use("/api/legal", require("./routes/legalRoutes"));
 
 // Admin routes
 app.use("/api/admin", require("./routes/adminRoutes"));
@@ -204,7 +188,6 @@ app.use(errorLogger);
 
 const PORT = process.env.PORT || 3000;
 
-console.log(`🔌 מנסה להתחבר ל-MongoDB...`);
 
 mongoose
   .connect(process.env.MONGO_URI)
@@ -229,7 +212,6 @@ mongoose
     app.listen(PORT, "0.0.0.0", () => {
       console.log(`🚀 Server is running on port ${PORT}`);
       console.log(`🌐 Server accessible at: http://localhost:${PORT}`);
-      console.log(`📡 API available at: http://localhost:${PORT}/api`);
     });
   })
   .catch((err) => {

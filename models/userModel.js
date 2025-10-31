@@ -28,8 +28,28 @@ const userSchema = new mongoose.Schema(
       default: null,
     },
     consentVersion: {
+      terms: {
+        type: String,
+        default: "1.0",
+      },
+      privacy: {
+        type: String,
+        default: "1.0",
+      },
+    },
+    termsLanguage: {
       type: String,
-      default: "1.0",
+      enum: ["he", "en"],
+      default: "he",
+    },
+    privacyLanguage: {
+      type: String,
+      enum: ["he", "en"],
+      default: "he",
+    },
+    needsConsentUpdate: {
+      type: Boolean,
+      default: false,
     },
     // Points system
     points: { type: Number, default: 0 }, // נקודות מצטברות לשימוש

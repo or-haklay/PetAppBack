@@ -50,8 +50,6 @@ exports.googleCallback = async (req, res, next) => {
 
 exports.googleOAuth = async (req, res, next) => {
   try {
-    console.log("[googleOAuth] Request body:", req.body);
-
     const {
       code,
       redirectUri,
@@ -63,8 +61,6 @@ exports.googleOAuth = async (req, res, next) => {
 
     // Handle native Google Sign-In with idToken directly (only if no authorization code)
     if (idToken && !code) {
-      console.log("[googleOAuth] Using native idToken authentication");
-      
       if (!idToken) {
         const error = new Error("Missing idToken");
         error.statusCode = 400;
@@ -147,25 +143,10 @@ exports.googleOAuth = async (req, res, next) => {
       return next(error);
     }
 
-    console.log("[googleOAuth] checks:", {
-      clientIdFromBodyTail: clientIdFromBody?.slice(-20),
-      redirectUri,
-      hasCodeVerifier: !!codeVerifier,
-      codeVerifierLength: codeVerifier ? codeVerifier.length : 0,
-      platform,
-    });
-
     // For serverAuthCode (redirectUri="postmessage"), we must use Web Client ID
     // because serverAuthCode is created for the Web Client ID in GoogleSignin.configure
     const webClientId = process.env.GOOGLE_WEB_CLIENT_ID;
     const effectiveClientId = redirectUri === "postmessage" ? webClientId : clientIdFromBody;
-
-    console.log("[googleOAuth] Using client ID:", {
-      original: clientIdFromBody?.slice(-20),
-      effective: effectiveClientId?.slice(-20),
-      redirectUri,
-      isServerAuthCode: redirectUri === "postmessage"
-    });
 
     // Use the effective client ID for token exchange
     const params = new URLSearchParams({
@@ -181,24 +162,10 @@ exports.googleOAuth = async (req, res, next) => {
       params.append("code_verifier", codeVerifier);
     }
 
-    console.log("[googleOAuth] Sending request to Google with params:", {
-      grant_type: "authorization_code",
-      code: code.substring(0, 20) + "...",
-      redirect_uri: redirectUri,
-      client_id: clientIdFromBody.substring(0, 20) + "...",
-      client_secret: process.env.GOOGLE_WEB_CLIENT_SECRET ? "***" : "MISSING",
-      has_code_verifier: !!codeVerifier,
-      full_params: params.toString(),
-    });
-
     let tokenRes;
     try {
       tokenRes = await axios.post(GOOGLE_TOKEN_ENDPOINT, params.toString(), {
         headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      });
-      console.log("[googleOAuth] Google response:", {
-        status: tokenRes.status,
-        data: tokenRes.data,
       });
     } catch (error) {
       console.error("[googleOAuth] Google token request failed:", {

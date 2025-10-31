@@ -213,11 +213,6 @@ const loginUser = async (req, res, next) => {
       user.password || ""
     );
 
-    console.log("DEBUG LOGIN:", {
-      plain: req.body.password,
-      hash: user.password,
-      result: validPassword,
-    });
     if (!validPassword) {
       const validationError = new Error("Invalid email or password");
       validationError.statusCode = 401;
