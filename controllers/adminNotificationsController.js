@@ -253,10 +253,8 @@ const createSampleNotifications = async (req, res, next) => {
   try {
     const { count = 10 } = req.body;
 
-    // Find some users with push tokens
-    const users = await User.find({
-      pushToken: { $exists: true, $ne: null },
-    })
+    // Find some users (with or without push tokens - we're just creating notifications in DB)
+    const users = await User.find({})
       .limit(10)
       .select("_id name")
       .lean();
@@ -264,7 +262,7 @@ const createSampleNotifications = async (req, res, next) => {
     if (users.length === 0) {
       return res.status(400).json({
         success: false,
-        message: "לא נמצאו משתמשים עם push tokens",
+        message: "לא נמצאו משתמשים במערכת",
       });
     }
 

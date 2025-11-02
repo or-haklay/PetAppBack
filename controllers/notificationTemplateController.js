@@ -368,33 +368,82 @@ const sendFromTemplate = async (req, res, next) => {
       // "all" - default
     }
 
-    const users = await User.find(query, { pushToken: 1, _id: 1 }).lean();
+    const users = await User.find(query, { pushToken: 1, _id: 1, pushNotificationsEnabled: 1 }).lean();
+
+    // Filter only users with push tokens and notifications enabled
+    const usersWithTokens = users.filter(
+      (user) => user.pushToken && user.pushNotificationsEnabled !== false
+    );
+
+    const { Notification } = require("../models/NotificationModel");
 
     let sentCount = 0;
-    for (const user of users) {
-      try {
-        await pushService.sendPushNotification({
-          to: user.pushToken,
-          title: finalTitle,
-          body: finalBody,
-          type: notificationType,
-          userId: user._id || user.id,
-          data: {
+    let failedCount = 0;
+    let savedToDbCount = 0;
+
+    // Send push notifications to users with tokens
+    if (usersWithTokens.length > 0) {
+      for (const user of usersWithTokens) {
+        try {
+          const result = await pushService.sendPushNotification({
+            to: user.pushToken,
+            title: finalTitle,
+            body: finalBody,
             type: notificationType,
-            templateId: template._id.toString(),
-            ...variables,
-          },
-        });
-        sentCount++;
-      } catch (error) {
-        console.error(`Failed to send to user ${user._id}:`, error.message);
+            userId: user._id || user.id,
+            data: {
+              type: notificationType,
+              templateId: template._id.toString(),
+              ...variables,
+            },
+          });
+          if (result.success) {
+            sentCount++;
+          } else {
+            failedCount++;
+            console.error(`Failed to send to user ${user._id}:`, result.error || result.skipped);
+          }
+        } catch (error) {
+          failedCount++;
+          console.error(`Failed to send to user ${user._id}:`, error.message);
+        }
       }
     }
 
+    // Also save to DB for all users (even without push tokens)
+    // This allows users to see the notification when they open the app
+    const allUserIds = users.map((u) => u._id);
+    if (allUserIds.length > 0) {
+      try {
+        const notifications = allUserIds.map((userId) => ({
+          userId,
+          title: finalTitle,
+          message: finalBody,
+          type: notificationType,
+          priority: template.priority || "medium",
+          scheduledFor: new Date(),
+          sound: "hayotush_notification",
+          isRead: false,
+        }));
+
+        await Notification.insertMany(notifications);
+        savedToDbCount = notifications.length;
+      } catch (error) {
+        console.error("Error saving notifications to DB:", error);
+      }
+    }
+
+    // Return success even if no push tokens (we saved to DB)
     res.json({
       success: true,
       totalUsers: users.length,
+      usersWithTokens: usersWithTokens.length,
       sentCount,
+      failedCount,
+      savedToDbCount,
+      message: usersWithTokens.length === 0
+        ? "לא נמצאו משתמשים עם push tokens מופעלים, אבל ההתראות נשמרו ב-DB"
+        : `נשלחו ${sentCount} התראות push ו-${savedToDbCount} נשמרו ב-DB`,
       template: {
         name: template.name,
         title: finalTitle,

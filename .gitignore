@@ -13,3 +13,4 @@
 *-firebase-adminsdk-*.json
 firebase-service-account.json
 *.firebase-admin.json
+firebase-env-variable.txt

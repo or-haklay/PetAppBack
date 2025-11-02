@@ -831,31 +831,54 @@ const sendNotification = async (req, res, next) => {
 
     // Send push notifications if scheduled for now
     if (scheduleDate <= new Date()) {
-      const users = await User.find({
+      // Get all users (not just those with push tokens) to save notifications in DB
+      const allUsers = await User.find({
         _id: { $in: userIds },
-        pushToken: { $exists: true, $ne: null },
-        pushNotificationsEnabled: true,
-      }).select("pushToken _id");
+      }).select("pushToken _id pushNotificationsEnabled");
 
-      const pushNotifications = users.map((user) => ({
-        to: user.pushToken,
-        title,
-        body: message,
-        type: type || "general",
-        userId: user._id || user.id,
-        data: { type: type || "general", priority },
-      }));
+      let sentCount = 0;
+      let savedToDbCount = 0;
 
-      if (pushNotifications.length > 0) {
-        await pushNotificationService.sendBulkPushNotifications(
-          pushNotifications
-        );
+      // Send push notifications to users with tokens
+      for (const user of allUsers) {
+        try {
+          // Save notification to DB for all users
+          savedToDbCount++;
+
+          // Only send push if user has token and notifications enabled
+          if (user.pushToken && user.pushNotificationsEnabled) {
+            const result = await pushNotificationService.sendPushNotification({
+              to: user.pushToken,
+              title,
+              body: message,
+              type: type || "general",
+              userId: user._id || user.id,
+              data: { type: type || "general", priority },
+            });
+
+            if (result.success) {
+              sentCount++;
+            }
+          }
+        } catch (error) {
+          console.error(`Failed to send notification to user ${user._id}:`, error.message);
+        }
       }
+
+      // Update response to include sent/saved counts
+      return res.json({
+        ok: true,
+        message: `Notification sent to ${sentCount} users, saved to DB for ${savedToDbCount} users`,
+        notifications: savedNotifications,
+        sentCount,
+        savedToDbCount,
+      });
     }
 
+    // If scheduled for future, just return success
     res.json({
       ok: true,
-      message: `Notification sent to ${userIds.length} users`,
+      message: `Notification scheduled for ${userIds.length} users`,
       notifications: savedNotifications,
     });
   } catch (error) {
