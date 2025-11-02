@@ -49,7 +49,8 @@ async function sendDailyTip(user, petSpecies) {
     to: user.pushToken,
     title: "💡 טיפ יומי",
     body: tip.he,
-    sound: "hayotush_notification",
+    type: "tip",
+    userId: user._id || user.id,
     data: { type: "tip" },
   });
 }
@@ -62,7 +63,8 @@ async function sendEngagementMessage(user) {
     to: user.pushToken,
     title: message.title,
     body: message.body,
-    sound: "hayotush_notification",
+    type: "engagement",
+    userId: user._id || user.id,
     data: { type: "engagement" },
   });
 }

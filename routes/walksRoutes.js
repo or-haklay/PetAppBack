@@ -3,7 +3,11 @@ const router = express.Router();
 const walksController = require("../controllers/walksController");
 const { authMW } = require("../middleware/authMW");
 
+// NOTE: Public routes are handled in main.js to avoid conflicts with /:petId route
+// The public route /api/walks/public/:id is defined separately before this router
+
 // Apply authentication middleware to all routes
+// All routes in this file require authentication
 router.use(authMW);
 
 /**
@@ -26,7 +30,16 @@ router.get("/walk/:id", walksController.getWalkById);
  * @access Private
  * @query period (week/month/year)
  */
-router.get("/:petId/stats", walksController.getWalkStats);
+// Add condition to prevent catching /public/ requests
+router.get("/:petId/stats", (req, res, next) => {
+  // If the petId is "public", this means /public/:id was incorrectly matched
+  if (req.params.petId === 'public') {
+    console.log("⚠️ [walksRoutes] Route /:petId/stats incorrectly matched /public/ request, skipping");
+    return next(); // Skip to next route handler
+  }
+  // Otherwise, proceed with the handler
+  walksController.getWalkStats(req, res, next);
+});
 
 /**
  * @route GET /api/walks/:petId
@@ -34,7 +47,16 @@ router.get("/:petId/stats", walksController.getWalkStats);
  * @access Private
  * @query page, limit, startDate, endDate
  */
-router.get("/:petId", walksController.getWalksByPetId);
+// Add condition to prevent catching /public/ requests
+router.get("/:petId", (req, res, next) => {
+  // If the petId is "public", this means /public/:id was incorrectly matched
+  if (req.params.petId === 'public') {
+    console.log("⚠️ [walksRoutes] Route /:petId incorrectly matched /public/ request, skipping");
+    return next(); // Skip to next route handler
+  }
+  // Otherwise, proceed with the handler
+  walksController.getWalksByPetId(req, res, next);
+});
 
 /**
  * @route PATCH /api/walks/:id

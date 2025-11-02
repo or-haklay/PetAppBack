@@ -56,6 +56,7 @@ const WalkSchema = new mongoose.Schema(
     pois: [POISchema],
     title: { type: String },
     isAutoCompleted: { type: Boolean, default: false },
+    isShared: { type: Boolean, default: false },
     gamificationEvents: [
       {
         eventKey: { type: String, required: true },
@@ -117,6 +118,7 @@ const createWalkSchema = Joi.object({
   ),
   title: Joi.string().allow("", null),
   isAutoCompleted: Joi.boolean(),
+  isShared: Joi.boolean(),
   distance: Joi.number().min(0).allow(0),
   duration: Joi.number().min(0),
   endTime: Joi.date(),
@@ -157,6 +159,7 @@ const updateWalkSchema = Joi.object({
   ),
   title: Joi.string().allow("", null),
   isAutoCompleted: Joi.boolean(),
+  isShared: Joi.boolean(),
   gamificationEvents: Joi.array().items(
     Joi.object({
       eventKey: Joi.string().required(),

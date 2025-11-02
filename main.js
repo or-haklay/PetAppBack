@@ -11,6 +11,7 @@ const {
   scheduleEngagementNotifications,
   scheduleNotificationChecks,
 } = require("./utils/cron/engagementCron");
+const { initializeDefaultSettings } = require("./utils/notificationSettingsService");
 
 // Load environment variables
 const path = require("path");
@@ -109,6 +110,16 @@ app.use("/api/gamification", require("./routes/gamificationRoutes"));
 
 app.use("/api/places", require("./routes/placesRoutes"));
 app.use("/api/calendar", require("./routes/calendarRoutes"));
+
+// Public walks routes (no auth required) - MUST be before private routes
+// Use a separate path to avoid conflicts with /:petId route
+const walksController = require("./controllers/walksController");
+app.get("/api/walks/public/:id", (req, res, next) => {
+  console.log("🌐 [main.js] Public walk route matched:", req.method, req.path, req.originalUrl);
+  walksController.getPublicWalkById(req, res, next);
+});
+
+// Private walks routes (auth required)
 app.use("/api/walks", require("./routes/walksRoutes"));
 
 app.use("/api/upload", require("./routes/uploadRoutes"));
@@ -141,6 +152,8 @@ app.use("/api/chat", require("./routes/chatRoutes"));
 app.use((error, req, res, next) => {
   console.error(`❌ [${req.requestId}] Error middleware:`, error);
   console.error(`📡 [${req.requestId}] Request: ${req.method} ${req.path}`);
+  console.error(`📡 [${req.requestId}] Original URL: ${req.originalUrl}`);
+  console.error(`📡 [${req.requestId}] Error statusCode: ${error.statusCode}, status: ${error.status}`);
   console.error(`📦 [${req.requestId}] Request body:`, req.body);
   console.error(`📋 [${req.requestId}] Request headers:`, req.headers);
   console.error(`📚 [${req.requestId}] Stack trace:`, error.stack);
@@ -173,7 +186,7 @@ app.use((error, req, res, next) => {
   }
 
   // שגיאות אחרות
-  const status = error.status || 500;
+  const status = error.statusCode || error.status || 500;
   const message = error.message || "אירעה שגיאה בשרת";
 
   res.status(status).json({
@@ -191,8 +204,17 @@ const PORT = process.env.PORT || 3000;
 
 mongoose
   .connect(process.env.MONGO_URI)
-  .then(() => {
+  .then(async () => {
     console.log("✅ Connected to MongoDB");
+    
+    // Initialize default notification settings
+    try {
+      await initializeDefaultSettings();
+      console.log("✅ Notification settings initialized");
+    } catch (e) {
+      console.error("Failed to initialize notification settings:", e);
+    }
+    
     // Start cron jobs after DB is ready
     try {
       scheduleDailyMissions();

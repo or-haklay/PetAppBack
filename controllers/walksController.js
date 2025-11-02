@@ -93,11 +93,17 @@ const updateWalk = async (req, res, next) => {
   }
 };
 
-// Get a single walk by ID
+// Get a single walk by ID (for authenticated users)
 const getWalkById = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const walk = await Walk.findOne({ _id: id, userId: req.user._id }).populate(
+    const walk = await Walk.findOne({ 
+      _id: id,
+      $or: [
+        { userId: req.user._id }, // User is owner
+        { isShared: true } // Or walk is shared
+      ]
+    }).populate(
       "petId",
       "name profilePictureUrl"
     );
@@ -112,10 +118,77 @@ const getWalkById = async (req, res, next) => {
   }
 };
 
+// Get a single walk by ID (public endpoint - no auth required)
+const getPublicWalkById = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    
+    console.log("📋 [getPublicWalkById] Public walk request:", { 
+      id, 
+      path: req.path, 
+      originalUrl: req.originalUrl,
+      method: req.method,
+      headers: req.headers
+    });
+    
+    // Validate ObjectId format
+    if (!id || id.length !== 24 || !/^[0-9a-fA-F]{24}$/.test(id)) {
+      console.log("❌ [getPublicWalkById] Invalid ID format:", id);
+      const error = new Error("Invalid walk ID format");
+      error.statusCode = 400;
+      return next(error);
+    }
+    
+    const walk = await Walk.findOne({ 
+      _id: id,
+      isShared: true // Only return if walk is shared
+    }).populate(
+      "petId",
+      "name profilePictureUrl"
+    ).lean(); // Use lean() for better performance and to avoid Mongoose errors
+    
+    if (!walk) {
+      console.log("❌ [getPublicWalkById] Walk not found or not shared:", id);
+      const error = new Error("Walk not found or not shared");
+      error.statusCode = 404;
+      return next(error);
+    }
+    
+    // Handle case where petId might be null or the populate failed
+    if (!walk.petId && walk.pet) {
+      // If petId is null but pet object exists, use it
+      walk.petId = walk.pet;
+    }
+    
+    console.log("✅ [getPublicWalkById] Walk found:", walk._id);
+    res.json(walk);
+  } catch (error) {
+    console.error("❌ [getPublicWalkById] Error:", error);
+    // Handle CastError (invalid ObjectId)
+    if (error.name === "CastError") {
+      const castError = new Error("Invalid walk ID format");
+      castError.statusCode = 400;
+      return next(castError);
+    }
+    // Handle other errors
+    const dbError = new Error("Database error occurred while fetching walk");
+    dbError.statusCode = 500;
+    return next(dbError);
+  }
+};
+
 // Get all walks for a specific pet
 const getWalksByPetId = async (req, res, next) => {
   try {
     const { petId } = req.params;
+    
+    // Prevent this route from catching /public/ requests
+    // If petId is "public", it means this route incorrectly matched /public/:id
+    if (petId === 'public' || (req.path && req.path.startsWith('/public/'))) {
+      console.log("⚠️ [getWalksByPetId] Route incorrectly matched /public/ request, passing to next");
+      return next();
+    }
+    
     const walks = await Walk.find({ petId, userId: req.user._id })
       .sort({ startTime: -1 })
       .populate("petId", "name profilePictureUrl");
@@ -155,6 +228,7 @@ module.exports = {
   createWalk,
   updateWalk,
   getWalkById,
+  getPublicWalkById,
   getWalksByPetId,
   deleteWalk,
   getWalkStats,

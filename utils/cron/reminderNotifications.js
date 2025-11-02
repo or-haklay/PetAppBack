@@ -63,10 +63,12 @@ async function sendReminderNotifications() {
             to: notification.userId.pushToken,
             title: title,
             body: notification.message,
+            type: "reminder",
+            userId: notification.userId._id || notification.userId.id,
             data: {
               type: "reminder",
-              reminderId: notification.relatedId,
-              notificationId: notification._id,
+              reminderId: notification.relatedId?.toString(),
+              notificationId: notification._id?.toString(),
               isOverdue: isOverdue,
             },
           });

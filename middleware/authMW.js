@@ -4,6 +4,7 @@ const { User } = require("../models/userModel");
 async function authMW(req, res, next) {
   const token = req.header("authorization");
   if (!token) {
+    console.log("🚫 [authMW] No token provided for:", req.method, req.path, req.originalUrl);
     const error = new Error("Access denied. No token provided.");
     error.statusCode = 401;
     return next(error);

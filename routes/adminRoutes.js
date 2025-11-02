@@ -24,6 +24,27 @@ const {
   getContentAnalytics,
   getRevenueAnalytics,
 } = require("../controllers/adminController");
+const {
+  getAllNotificationSettings,
+  getNotificationSettingByType,
+  updateNotificationSettingByType,
+  toggleNotificationSetting,
+  initializeSettings,
+} = require("../controllers/notificationSettingsController");
+const {
+  getNotificationHistory,
+  getNotificationStats,
+  createSampleNotifications,
+} = require("../controllers/adminNotificationsController");
+const {
+  getAllTemplates,
+  getTemplateById,
+  createTemplate,
+  updateTemplate,
+  deleteTemplate,
+  initializeTemplates,
+  sendFromTemplate,
+} = require("../controllers/notificationTemplateController");
 
 // סטטיסטיקות
 router.get("/stats", authMW, adminMW, getStats);
@@ -49,6 +70,27 @@ router.delete("/content/categories/:id", authMW, adminMW, deleteCategory);
 // שליחת התראות
 router.post("/notifications/send", authMW, adminMW, sendNotification);
 router.post("/notifications/broadcast", authMW, adminMW, broadcastNotification);
+
+// היסטוריית התראות
+router.get("/notifications/history", authMW, adminMW, getNotificationHistory);
+router.get("/notifications/stats", authMW, adminMW, getNotificationStats);
+router.post("/notifications/create-sample", authMW, adminMW, createSampleNotifications);
+
+// ניהול תבניות התראות
+router.get("/notifications/templates", authMW, adminMW, getAllTemplates);
+router.get("/notifications/templates/:id", authMW, adminMW, getTemplateById);
+router.post("/notifications/templates", authMW, adminMW, createTemplate);
+router.put("/notifications/templates/:id", authMW, adminMW, updateTemplate);
+router.delete("/notifications/templates/:id", authMW, adminMW, deleteTemplate);
+router.post("/notifications/templates/initialize", authMW, adminMW, initializeTemplates);
+router.post("/notifications/templates/:id/send", authMW, adminMW, sendFromTemplate);
+
+// ניהול הגדרות התראות
+router.get("/notifications/settings", authMW, adminMW, getAllNotificationSettings);
+router.get("/notifications/settings/:type", authMW, adminMW, getNotificationSettingByType);
+router.put("/notifications/settings/:type", authMW, adminMW, updateNotificationSettingByType);
+router.put("/notifications/settings/:type/toggle", authMW, adminMW, toggleNotificationSetting);
+router.post("/notifications/settings/initialize", authMW, adminMW, initializeSettings);
 
 // מערכת וסטטיסטיקות
 router.get("/system/info", authMW, adminMW, getSystemInfo);

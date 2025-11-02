@@ -8,3 +8,8 @@
 
 # Environment Variables
 .env
+
+# Firebase Service Account (contains sensitive credentials)
+*-firebase-adminsdk-*.json
+firebase-service-account.json
+*.firebase-admin.json

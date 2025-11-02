@@ -73,8 +73,9 @@ async function sendScheduledNotifications() {
               to: user.pushToken,
               title: notification.title,
               body: notification.body,
-              sound: notification.sound,
-              data: { type: notification.type },
+              type: notification.type || "engagement",
+              userId: user._id || user.id,
+              data: { type: notification.type || "engagement" },
             });
             sentCount++;
           } catch (error) {

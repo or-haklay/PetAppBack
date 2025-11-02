@@ -10,6 +10,8 @@ const getStats = async (req, res, next) => {
     const now = new Date();
     const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
     const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    const sixtyDaysAgo = new Date(now.getTime() - 60 * 24 * 60 * 60 * 1000);
+    const fourteenDaysAgo = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);
 
     // User statistics
     const [
@@ -19,6 +21,8 @@ const getStats = async (req, res, next) => {
       premiumUsers,
       activeUsers,
       adminUsers,
+      usersBefore30Days,
+      activeUsersBefore7Days,
     ] = await Promise.all([
       User.countDocuments(),
       User.countDocuments({ createdAt: { $gte: thirtyDaysAgo } }),
@@ -29,6 +33,10 @@ const getStats = async (req, res, next) => {
       }),
       User.countDocuments({ lastActive: { $gte: sevenDaysAgo } }),
       User.countDocuments({ isAdmin: true }),
+      // Users that existed before 30 days ago (created before 60 days ago)
+      User.countDocuments({ createdAt: { $lt: sixtyDaysAgo } }),
+      // Active users 7-14 days ago
+      User.countDocuments({ lastActive: { $gte: fourteenDaysAgo, $lt: sevenDaysAgo } }),
     ]);
 
     // Content statistics
@@ -38,13 +46,42 @@ const getStats = async (req, res, next) => {
       unpublishedArticles,
       totalCategories,
       activeCategories,
+      articles30DaysAgo,
     ] = await Promise.all([
       ContentArticle.countDocuments(),
       ContentArticle.countDocuments({ published: true }),
       ContentArticle.countDocuments({ published: false }),
       ContentCategory.countDocuments(),
       ContentCategory.countDocuments({ active: true }),
+      ContentArticle.countDocuments({
+        createdAt: { $lt: thirtyDaysAgo },
+      }),
     ]);
+
+    // Calculate growth percentages
+    // For user growth: compare total users now vs users that existed before 30 days ago
+    const users30DaysAgo = usersBefore30Days; // Users created before 60 days ago
+    const userGrowth =
+      users30DaysAgo > 0
+        ? ((totalUsers - users30DaysAgo) / users30DaysAgo) * 100
+        : newUsersLast30Days > 0 ? 100 : 0; // If no previous users, 100% growth or 0%
+
+    // For active user growth: compare current active vs active 7-14 days ago
+    const previousActiveUsers = activeUsersBefore7Days;
+    const activeGrowth =
+      previousActiveUsers > 0
+        ? ((activeUsers - previousActiveUsers) / previousActiveUsers) * 100
+        : activeUsers > 0 ? 100 : 0;
+
+    const previousArticles = articles30DaysAgo;
+    const articleGrowth =
+      previousArticles > 0
+        ? ((totalArticles - previousArticles) / previousArticles) * 100
+        : 0;
+
+    // Calculate revenue (basic calculation based on premium users)
+    // This is a simplified calculation - in production you'd want actual revenue data
+    const monthlyRevenue = premiumUsers * 29.99; // Assuming average monthly subscription
 
     // Recent activity
     const recentUsers = await User.find()
@@ -98,13 +135,21 @@ const getStats = async (req, res, next) => {
           premium: premiumUsers,
           active: activeUsers,
           admin: adminUsers,
+          growth: Math.round(userGrowth * 100) / 100,
+          activeGrowth: Math.round(activeGrowth * 100) / 100,
         },
         content: {
+          articles: totalArticles, // Also include as 'articles' for compatibility
           totalArticles,
           publishedArticles,
           unpublishedArticles,
           totalCategories,
           activeCategories,
+          articleGrowth: Math.round(articleGrowth * 100) / 100,
+        },
+        revenue: {
+          monthly: Math.round(monthlyRevenue * 100) / 100,
+          growth: activeGrowth, // Use active growth as revenue growth indicator
         },
         recentActivity: {
           users: recentUsers,
@@ -193,8 +238,15 @@ const getUsersList = async (req, res, next) => {
 const updateUserRole = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const { isAdmin, subscriptionPlan, subscriptionExpiresAt, points, coins } =
-      req.body;
+    const {
+      isAdmin,
+      subscriptionPlan,
+      subscriptionExpiresAt,
+      points,
+      coins,
+      name,
+      email,
+    } = req.body;
 
     const updateData = {};
 
@@ -205,6 +257,20 @@ const updateUserRole = async (req, res, next) => {
       updateData.subscriptionExpiresAt = subscriptionExpiresAt;
     if (points !== undefined) updateData.points = points;
     if (coins !== undefined) updateData.coins = coins;
+    if (name !== undefined) updateData.name = name;
+    if (email !== undefined) {
+      // Check if email is already taken by another user
+      const existingUser = await User.findOne({
+        email: email,
+        _id: { $ne: id },
+      });
+      if (existingUser) {
+        const error = new Error("Email already exists");
+        error.statusCode = 400;
+        return next(error);
+      }
+      updateData.email = email;
+    }
 
     const user = await User.findByIdAndUpdate(
       id,
@@ -225,6 +291,12 @@ const updateUserRole = async (req, res, next) => {
     });
   } catch (error) {
     console.error("updateUserRole error:", error);
+    // Handle duplicate key error (MongoDB unique constraint)
+    if (error.code === 11000 || error.name === "MongoServerError") {
+      const dbError = new Error("Email already exists");
+      dbError.statusCode = 400;
+      return next(dbError);
+    }
     const dbError = new Error("Database error occurred while updating user");
     dbError.statusCode = 500;
     return next(dbError);
@@ -300,6 +372,29 @@ const createArticle = async (req, res, next) => {
   try {
     const articleData = req.body;
 
+    // Validate required fields
+    if (!articleData.title) {
+      const error = new Error("Title is required");
+      error.statusCode = 400;
+      return next(error);
+    }
+
+    if (!articleData.categoryKey) {
+      const error = new Error("Category is required");
+      error.statusCode = 400;
+      return next(error);
+    }
+
+    // Validate that category exists
+    const category = await ContentCategory.findOne({
+      key: articleData.categoryKey,
+    });
+    if (!category) {
+      const error = new Error("Category not found");
+      error.statusCode = 404;
+      return next(error);
+    }
+
     // Generate slug if not provided
     if (!articleData.slug) {
       articleData.slug = articleData.title
@@ -328,6 +423,26 @@ const createArticle = async (req, res, next) => {
     });
   } catch (error) {
     console.error("createArticle error:", error);
+    
+    // Handle duplicate key errors (slug)
+    if (error.code === 11000 || error.name === "MongoServerError") {
+      const dbError = new Error("Article slug already exists");
+      dbError.statusCode = 400;
+      return next(dbError);
+    }
+    
+    // Handle validation errors
+    if (error.name === "ValidationError") {
+      const dbError = new Error(`Validation error: ${error.message}`);
+      dbError.statusCode = 400;
+      return next(dbError);
+    }
+    
+    // If error already has statusCode, pass it along
+    if (error.statusCode) {
+      return next(error);
+    }
+    
     const dbError = new Error("Database error occurred while creating article");
     dbError.statusCode = 500;
     return next(dbError);
@@ -340,10 +455,35 @@ const updateArticle = async (req, res, next) => {
     const { id } = req.params;
     const updateData = req.body;
 
+    // If categoryKey is being updated, validate that category exists
+    if (updateData.categoryKey) {
+      const category = await ContentCategory.findOne({
+        key: updateData.categoryKey,
+      });
+      if (!category) {
+        const error = new Error("Category not found");
+        error.statusCode = 404;
+        return next(error);
+      }
+    }
+
+    // If slug is being updated, ensure it's unique
+    if (updateData.slug) {
+      const existingArticle = await ContentArticle.findOne({
+        slug: updateData.slug,
+        _id: { $ne: id },
+      });
+      if (existingArticle) {
+        const error = new Error("Article slug already exists");
+        error.statusCode = 400;
+        return next(error);
+      }
+    }
+
     const article = await ContentArticle.findByIdAndUpdate(
       id,
       { $set: updateData },
-      { new: true }
+      { new: true, runValidators: true }
     );
 
     if (!article) {
@@ -359,6 +499,26 @@ const updateArticle = async (req, res, next) => {
     });
   } catch (error) {
     console.error("updateArticle error:", error);
+    
+    // Handle duplicate key errors (slug)
+    if (error.code === 11000 || error.name === "MongoServerError") {
+      const dbError = new Error("Article slug already exists");
+      dbError.statusCode = 400;
+      return next(dbError);
+    }
+    
+    // Handle validation errors
+    if (error.name === "ValidationError") {
+      const dbError = new Error(`Validation error: ${error.message}`);
+      dbError.statusCode = 400;
+      return next(dbError);
+    }
+    
+    // If error already has statusCode, pass it along
+    if (error.statusCode) {
+      return next(error);
+    }
+    
     const dbError = new Error("Database error occurred while updating article");
     dbError.statusCode = 500;
     return next(dbError);
@@ -480,6 +640,29 @@ const createCategory = async (req, res, next) => {
   try {
     const categoryData = req.body;
 
+    // Validate required fields
+    if (!categoryData.key) {
+      const error = new Error("Category key is required");
+      error.statusCode = 400;
+      return next(error);
+    }
+
+    if (!categoryData.title) {
+      const error = new Error("Category title is required");
+      error.statusCode = 400;
+      return next(error);
+    }
+
+    // Check if key already exists
+    const existingCategory = await ContentCategory.findOne({
+      key: categoryData.key,
+    });
+    if (existingCategory) {
+      const error = new Error("Category key already exists");
+      error.statusCode = 400;
+      return next(error);
+    }
+
     const category = new ContentCategory(categoryData);
     await category.save();
 
@@ -490,6 +673,26 @@ const createCategory = async (req, res, next) => {
     });
   } catch (error) {
     console.error("createCategory error:", error);
+    
+    // Handle duplicate key errors
+    if (error.code === 11000 || error.name === "MongoServerError") {
+      const dbError = new Error("Category key already exists");
+      dbError.statusCode = 400;
+      return next(dbError);
+    }
+    
+    // Handle validation errors
+    if (error.name === "ValidationError") {
+      const dbError = new Error(`Validation error: ${error.message}`);
+      dbError.statusCode = 400;
+      return next(dbError);
+    }
+    
+    // If error already has statusCode, pass it along
+    if (error.statusCode) {
+      return next(error);
+    }
+    
     const dbError = new Error(
       "Database error occurred while creating category"
     );
@@ -536,23 +739,30 @@ const deleteCategory = async (req, res, next) => {
   try {
     const { id } = req.params;
 
-    // Check if category has articles
-    const articleCount = await ContentArticle.countDocuments({
-      categoryKey: id,
-    });
-    if (articleCount > 0) {
-      const error = new Error("Cannot delete category with existing articles");
-      error.statusCode = 400;
-      return next(error);
-    }
-
-    const category = await ContentCategory.findByIdAndDelete(id);
-
+    // First, find the category to get its key
+    const category = await ContentCategory.findById(id);
+    
     if (!category) {
       const error = new Error("Category not found");
       error.statusCode = 404;
       return next(error);
     }
+
+    // Check if category has articles using the category key
+    const articleCount = await ContentArticle.countDocuments({
+      categoryKey: category.key,
+    });
+    
+    if (articleCount > 0) {
+      const error = new Error(
+        `Cannot delete category with ${articleCount} existing article${articleCount > 1 ? 's' : ''}. Please remove or reassign articles first.`
+      );
+      error.statusCode = 400;
+      return next(error);
+    }
+
+    // Delete the category
+    await ContentCategory.findByIdAndDelete(id);
 
     res.json({
       ok: true,
@@ -560,6 +770,19 @@ const deleteCategory = async (req, res, next) => {
     });
   } catch (error) {
     console.error("deleteCategory error:", error);
+    
+    // Handle duplicate key errors
+    if (error.code === 11000) {
+      const dbError = new Error("Category key already exists");
+      dbError.statusCode = 400;
+      return next(dbError);
+    }
+    
+    // If error already has statusCode, pass it along
+    if (error.statusCode) {
+      return next(error);
+    }
+    
     const dbError = new Error(
       "Database error occurred while deleting category"
     );
@@ -612,13 +835,15 @@ const sendNotification = async (req, res, next) => {
         _id: { $in: userIds },
         pushToken: { $exists: true, $ne: null },
         pushNotificationsEnabled: true,
-      }).select("pushToken");
+      }).select("pushToken _id");
 
       const pushNotifications = users.map((user) => ({
         to: user.pushToken,
         title,
         body: message,
-        data: { type, priority },
+        type: type || "general",
+        userId: user._id || user.id,
+        data: { type: type || "general", priority },
       }));
 
       if (pushNotifications.length > 0) {
@@ -701,7 +926,9 @@ const broadcastNotification = async (req, res, next) => {
         to: user.pushToken,
         title,
         body: message,
-        data: { type, priority },
+        type: type || "general",
+        userId: user._id || user.id,
+        data: { type: type || "general", priority },
       }));
 
       if (pushNotifications.length > 0) {
@@ -870,8 +1097,8 @@ const getContentAnalytics = async (req, res, next) => {
   try {
     const contentAnalytics = {
       articles: await ContentArticle.countDocuments(),
-      published: await ContentArticle.countDocuments({ isPublished: true }),
-      drafts: await ContentArticle.countDocuments({ isPublished: false }),
+      published: await ContentArticle.countDocuments({ published: true }),
+      drafts: await ContentArticle.countDocuments({ published: false }),
       categories: await ContentCategory.countDocuments(),
       totalViews: 15420, // Mock total views
       engagement: 8.5, // Mock engagement rate

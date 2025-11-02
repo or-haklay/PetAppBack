@@ -218,6 +218,19 @@ const acceptLegalDocuments = async (req, res, next) => {
     }
 
     // Update user consent
+    // MongoDB doesn't allow $unset and $set on the same field in one operation
+    // So we need to do this in two separate operations:
+    // Step 1: Unset the old consentVersion if it exists (handles legacy string format)
+    await User.findByIdAndUpdate(
+      userId,
+      {
+        $unset: {
+          consentVersion: "",
+        },
+      }
+    );
+
+    // Step 2: Set the new consentVersion object structure along with other fields
     const user = await User.findByIdAndUpdate(
       userId,
       {
@@ -225,8 +238,10 @@ const acceptLegalDocuments = async (req, res, next) => {
           termsAccepted: true,
           privacyAccepted: true,
           consentTimestamp: new Date(),
-          "consentVersion.terms": termsVersion,
-          "consentVersion.privacy": privacyVersion,
+          consentVersion: {
+            terms: termsVersion,
+            privacy: privacyVersion,
+          },
           termsLanguage: termsLanguage || "he",
           privacyLanguage: privacyLanguage || "he",
           needsConsentUpdate: false,
