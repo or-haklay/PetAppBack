@@ -1,6 +1,7 @@
 const { LegalDocument } = require("../models/legalDocumentModel");
 const { User } = require("../models/userModel");
 const { uploadToS3, getPublicUrl } = require("../config/s3Config");
+const logger = require("../utils/logger");
 
 // Upload a new legal document (Admin only)
 const uploadLegalDocument = async (req, res, next) => {
@@ -69,8 +70,8 @@ const uploadLegalDocument = async (req, res, next) => {
       { $set: { needsConsentUpdate: true } }
     );
 
-    console.log(`✅ Legal document uploaded: ${type} (${language}) v${version}`);
-    console.log(`📧 All users marked for consent update`);
+    logger.info(`Legal document uploaded: ${type} (${language}) v${version}`);
+    logger.info(`All users marked for consent update`);
 
     res.status(201).json({
       ok: true,
@@ -78,7 +79,7 @@ const uploadLegalDocument = async (req, res, next) => {
       document: legalDocument,
     });
   } catch (error) {
-    console.error("uploadLegalDocument error:", error);
+    logger.error(`uploadLegalDocument error: ${error.message}`, { error, stack: error.stack, documentType: req.body.type });
     const dbError = new Error("Error uploading legal document");
     dbError.statusCode = 500;
     return next(dbError);
@@ -104,7 +105,7 @@ const getActiveLegalDocuments = async (req, res, next) => {
       documents,
     });
   } catch (error) {
-    console.error("getActiveLegalDocuments error:", error);
+    logger.error(`getActiveLegalDocuments error: ${error.message}`, { error, stack: error.stack });
     const dbError = new Error("Error fetching active legal documents");
     dbError.statusCode = 500;
     return next(dbError);
@@ -143,7 +144,7 @@ const getLegalDocumentHistory = async (req, res, next) => {
       },
     });
   } catch (error) {
-    console.error("getLegalDocumentHistory error:", error);
+    logger.error(`getLegalDocumentHistory error: ${error.message}`, { error, stack: error.stack });
     const dbError = new Error("Error fetching legal document history");
     dbError.statusCode = 500;
     return next(dbError);
@@ -180,7 +181,7 @@ const getLegalDocumentByType = async (req, res, next) => {
       document,
     });
   } catch (error) {
-    console.error("getLegalDocumentByType error:", error);
+    logger.error(`getLegalDocumentByType error: ${error.message}`, { error, stack: error.stack, documentType: req.params.type });
     const dbError = new Error("Error fetching legal document");
     dbError.statusCode = 500;
     return next(dbError);
@@ -250,7 +251,7 @@ const acceptLegalDocuments = async (req, res, next) => {
       { new: true }
     ).select("-password");
 
-    console.log(`✅ User ${user.email} accepted legal documents`);
+    logger.info(`User ${user.email} accepted legal documents`);
 
     res.json({
       ok: true,
@@ -258,7 +259,7 @@ const acceptLegalDocuments = async (req, res, next) => {
       user,
     });
   } catch (error) {
-    console.error("acceptLegalDocuments error:", error);
+    logger.error(`acceptLegalDocuments error: ${error.message}`, { error, stack: error.stack, userId: req.user?._id });
     const dbError = new Error("Error accepting legal documents");
     dbError.statusCode = 500;
     return next(dbError);
@@ -319,7 +320,7 @@ const getConsentStatus = async (req, res, next) => {
       },
     });
   } catch (error) {
-    console.error("getConsentStatus error:", error);
+    logger.error(`getConsentStatus error: ${error.message}`, { error, stack: error.stack, userId: req.user?._id });
     const dbError = new Error("Error fetching consent status");
     dbError.statusCode = 500;
     return next(dbError);
@@ -366,7 +367,7 @@ const getConsentStatistics = async (req, res, next) => {
       totalUsers,
     });
   } catch (error) {
-    console.error("getConsentStatistics error:", error);
+    logger.error(`getConsentStatistics error: ${error.message}`, { error, stack: error.stack });
     const dbError = new Error("Error fetching consent statistics");
     dbError.statusCode = 500;
     return next(dbError);

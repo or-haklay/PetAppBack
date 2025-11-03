@@ -5,6 +5,7 @@ const {
   initializeDefaultSettings,
 } = require("../utils/notificationSettingsService");
 const { notificationSettingsUpdate } = require("../models/NotificationSettingsModel");
+const logger = require("../utils/logger");
 
 /**
  * קבלת כל הגדרות ההתראות
@@ -15,7 +16,7 @@ const getAllNotificationSettings = async (req, res, next) => {
     const settings = await getNotificationSettings();
     res.json({ success: true, settings });
   } catch (error) {
-    console.error("Error getting notification settings:", error);
+    logger.error(`Error getting notification settings: ${error.message}`, { error, stack: error.stack });
     const dbError = new Error("Error getting notification settings");
     dbError.statusCode = 500;
     return next(dbError);
@@ -39,7 +40,7 @@ const getNotificationSettingByType = async (req, res, next) => {
     const setting = await getNotificationSetting(type);
     res.json({ success: true, setting });
   } catch (error) {
-    console.error(`Error getting notification setting for type ${req.params.type}:`, error);
+    logger.error(`Error getting notification setting for type ${req.params.type}: ${error.message}`, { error, stack: error.stack, type: req.params.type });
     const dbError = new Error("Error getting notification setting");
     dbError.statusCode = 500;
     return next(dbError);
@@ -77,7 +78,7 @@ const updateNotificationSettingByType = async (req, res, next) => {
     const setting = await updateNotificationSetting(type, value, userId);
     res.json({ success: true, setting, message: "Notification setting updated successfully" });
   } catch (error) {
-    console.error(`Error updating notification setting for type ${req.params.type}:`, error);
+    logger.error(`Error updating notification setting for type ${req.params.type}: ${error.message}`, { error, stack: error.stack, type: req.params.type });
     const dbError = new Error("Error updating notification setting");
     dbError.statusCode = 500;
     return next(dbError);
@@ -114,7 +115,7 @@ const toggleNotificationSetting = async (req, res, next) => {
       message: `Notification type ${type} ${newEnabledState ? "enabled" : "disabled"}`,
     });
   } catch (error) {
-    console.error(`Error toggling notification setting for type ${req.params.type}:`, error);
+    logger.error(`Error toggling notification setting for type ${req.params.type}: ${error.message}`, { error, stack: error.stack, type: req.params.type });
     const dbError = new Error("Error toggling notification setting");
     dbError.statusCode = 500;
     return next(dbError);
@@ -133,7 +134,7 @@ const initializeSettings = async (req, res, next) => {
       message: "Default notification settings initialized",
     });
   } catch (error) {
-    console.error("Error initializing notification settings:", error);
+    logger.error(`Error initializing notification settings: ${error.message}`, { error, stack: error.stack });
     const dbError = new Error("Error initializing notification settings");
     dbError.statusCode = 500;
     return next(dbError);

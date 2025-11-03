@@ -3,6 +3,9 @@ const { ContentArticle, ContentCategory } = require("../models/contentModels");
 const { Notification } = require("../models/NotificationModel");
 const pushNotificationService = require("../utils/pushNotificationService");
 const mongoose = require("mongoose");
+const fs = require("fs").promises;
+const path = require("path");
+const logger = require("../utils/logger");
 
 // Get comprehensive admin statistics
 const getStats = async (req, res, next) => {
@@ -162,7 +165,7 @@ const getStats = async (req, res, next) => {
       },
     });
   } catch (error) {
-    console.error("getStats error:", error);
+    logger.error(`getStats error: ${error.message}`, { error, stack: error.stack });
     const dbError = new Error("Database error occurred while fetching stats");
     dbError.statusCode = 500;
     return next(dbError);
@@ -227,7 +230,7 @@ const getUsersList = async (req, res, next) => {
       },
     });
   } catch (error) {
-    console.error("getUsersList error:", error);
+    logger.error(`getUsersList error: ${error.message}`, { error, stack: error.stack });
     const dbError = new Error("Database error occurred while fetching users");
     dbError.statusCode = 500;
     return next(dbError);
@@ -290,7 +293,7 @@ const updateUserRole = async (req, res, next) => {
       user,
     });
   } catch (error) {
-    console.error("updateUserRole error:", error);
+    logger.error(`updateUserRole error: ${error.message}`, { error, stack: error.stack, userId: req.params.id });
     // Handle duplicate key error (MongoDB unique constraint)
     if (error.code === 11000 || error.name === "MongoServerError") {
       const dbError = new Error("Email already exists");
@@ -327,7 +330,7 @@ const blockUser = async (req, res, next) => {
       user,
     });
   } catch (error) {
-    console.error("blockUser error:", error);
+    logger.error(`blockUser error: ${error.message}`, { error, stack: error.stack, userId: req.params.id });
     const dbError = new Error("Database error occurred while blocking user");
     dbError.statusCode = 500;
     return next(dbError);
@@ -360,7 +363,7 @@ const deleteUserAdmin = async (req, res, next) => {
       message: "User deleted successfully",
     });
   } catch (error) {
-    console.error("deleteUserAdmin error:", error);
+    logger.error(`deleteUserAdmin error: ${error.message}`, { error, stack: error.stack, userId: req.params.id });
     const dbError = new Error("Database error occurred while deleting user");
     dbError.statusCode = 500;
     return next(dbError);
@@ -422,7 +425,7 @@ const createArticle = async (req, res, next) => {
       article,
     });
   } catch (error) {
-    console.error("createArticle error:", error);
+    logger.error(`createArticle error: ${error.message}`, { error, stack: error.stack, articleData: req.body });
     
     // Handle duplicate key errors (slug)
     if (error.code === 11000 || error.name === "MongoServerError") {
@@ -627,7 +630,7 @@ const getCategoriesList = async (req, res, next) => {
       categories,
     });
   } catch (error) {
-    console.error("getCategoriesList error:", error);
+    logger.error(`getCategoriesList error: ${error.message}`, { error, stack: error.stack });
     const dbError = new Error(
       "Database error occurred while fetching categories"
     );
@@ -769,7 +772,7 @@ const deleteCategory = async (req, res, next) => {
       message: "Category deleted successfully",
     });
   } catch (error) {
-    console.error("deleteCategory error:", error);
+    logger.error(`deleteCategory error: ${error.message}`, { error, stack: error.stack, categoryId: req.params.id });
     
     // Handle duplicate key errors
     if (error.code === 11000) {
@@ -796,6 +799,7 @@ const sendNotification = async (req, res, next) => {
   try {
     const {
       userIds,
+      targetType = "all", // all, premium, specific
       title,
       message,
       type = "general",
@@ -803,10 +807,13 @@ const sendNotification = async (req, res, next) => {
       scheduledFor,
     } = req.body;
 
-    if (!userIds || !Array.isArray(userIds) || userIds.length === 0) {
-      const error = new Error("User IDs are required");
-      error.statusCode = 400;
-      return next(error);
+    // בדיקה אם בוחרים "specific" אבל לא נתנו userIds
+    if (targetType === "specific") {
+      if (!userIds || !Array.isArray(userIds) || userIds.length === 0) {
+        const error = new Error("User IDs are required when targetType is 'specific'");
+        error.statusCode = 400;
+        return next(error);
+      }
     }
 
     if (!title || !message) {
@@ -815,27 +822,152 @@ const sendNotification = async (req, res, next) => {
       return next(error);
     }
 
+    // בניית query לפי targetType
+    let userQuery = {};
+    let finalUserIds = userIds || [];
+
+    if (targetType === "all") {
+      // כל המשתמשים עם push token
+      userQuery = { pushToken: { $exists: true, $ne: null } };
+    } else if (targetType === "premium") {
+      // משתמשים פרימיום בלבד - premium או gold עם מנוי פעיל
+      const now = new Date();
+      userQuery = {
+        pushToken: { $exists: true, $ne: null },
+        subscriptionPlan: { $in: ["premium", "gold"] },
+        $or: [
+          { subscriptionExpiresAt: { $exists: false } }, // אין תאריך תפוגה = מנוי לכל החיים
+          { subscriptionExpiresAt: null }, // תאריך תפוגה null = מנוי לכל החיים
+          { subscriptionExpiresAt: { $gt: now } }, // מנוי שעדיין פעיל
+        ],
+      };
+    } else if (targetType === "specific") {
+      // משתמשים ספציפיים לפי userIds
+      userQuery = { _id: { $in: userIds } };
+      finalUserIds = userIds;
+    }
+
+    // מצא את כל המשתמשים המתאימים
+    console.log(`🔍 [sendNotification] targetType: ${targetType}, userQuery:`, JSON.stringify(userQuery, null, 2));
+    const allUsers = await User.find(userQuery).select("_id pushToken pushNotificationsEnabled subscriptionPlan subscriptionExpiresAt").lean();
+    console.log(`✅ [sendNotification] Found ${allUsers.length} users matching criteria`);
+
+    // אם targetType הוא specific, וודא שיש משתמשים
+    if (targetType === "specific" && allUsers.length === 0) {
+      const error = new Error("No users found with the provided user IDs");
+      error.statusCode = 400;
+      return next(error);
+    }
+
+    // עדכן את finalUserIds לפי המשתמשים שנמצאו
+    if (targetType !== "specific") {
+      finalUserIds = allUsers.map((u) => u._id.toString());
+    }
+
+    // אם אין משתמשים בכלל, חזור שגיאה עם הודעה יותר ברורה
+    if (finalUserIds.length === 0) {
+      let errorMessage = "No users found matching the criteria";
+      if (targetType === "premium") {
+        errorMessage = "No premium users found with active subscriptions and push tokens. Please check that users have premium/gold subscription and push notifications enabled.";
+      } else if (targetType === "all") {
+        errorMessage = "No users found with push tokens. Please ensure users have enabled push notifications.";
+      }
+      const error = new Error(errorMessage);
+      error.statusCode = 400;
+      return next(error);
+    }
+
     const scheduleDate = scheduledFor ? new Date(scheduledFor) : new Date();
 
-    // Create notifications in database
-    const notifications = userIds.map((userId) => ({
-      userId,
-      title,
-      message,
-      type,
-      priority,
-      scheduledFor: scheduleDate,
-    }));
+    // Helper function to replace variables in text
+    const replaceVariables = (text, userData) => {
+      if (!text) return "";
+      let result = text;
+      // Find all variables like {key}
+      const variableRegex = /\{([^}]+)\}/g;
+      const matches = result.match(variableRegex);
+      if (matches) {
+        matches.forEach((match) => {
+          const key = match.slice(1, -1); // Remove { and }
+          const value = userData[key];
+          if (value !== undefined && value !== null && value !== "") {
+            result = result.replace(new RegExp(`\\{${key.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\}`, "g"), value.toString());
+          }
+        });
+      }
+      return result;
+    };
 
-    const savedNotifications = await Notification.insertMany(notifications);
+    // Helper function to get user-specific data for variable replacement
+    const getUserDataForNotification = async (userId) => {
+      const userData = {};
+      try {
+        const user = await User.findById(userId).select("name").lean();
+        if (user) {
+          userData.userName = user.name || "";
+          userData.userName_heb = user.name || "";
+        }
+
+        // Get user's pets
+        const { Pet } = require("../models/petModel");
+        const pets = await Pet.find({ owner: userId }).select("name").lean();
+        if (pets && pets.length > 0) {
+          const firstPet = pets[0];
+          userData.petName = firstPet.name || "";
+          userData.firstPetName = firstPet.name || "";
+          if (pets.length > 1) {
+            userData.petNames = pets.map((p) => p.name).join(", ");
+          } else {
+            userData.petNames = firstPet.name || "";
+          }
+        } else {
+          userData.petName = "";
+          userData.firstPetName = "";
+          userData.petNames = "";
+        }
+      } catch (error) {
+        console.error(`Error getting user data for ${userId}:`, error);
+      }
+      return userData;
+    };
+
+    // Create notifications in database with variable replacement
+    const notificationsToSave = [];
+    for (const userId of finalUserIds) {
+      try {
+        // Get user-specific data for variable replacement
+        const userData = await getUserDataForNotification(userId.toString());
+        
+        // Replace variables in title and message
+        const personalizedTitle = replaceVariables(title, userData);
+        const personalizedMessage = replaceVariables(message, userData);
+
+        notificationsToSave.push({
+          userId,
+          title: personalizedTitle,
+          message: personalizedMessage,
+          type,
+          priority,
+          scheduledFor: scheduleDate,
+        });
+      } catch (error) {
+        console.error(`Error preparing notification for user ${userId}:`, error);
+        // Fallback: save without variable replacement
+        notificationsToSave.push({
+          userId,
+          title,
+          message,
+          type,
+          priority,
+          scheduledFor: scheduleDate,
+        });
+      }
+    }
+
+    const savedNotifications = await Notification.insertMany(notificationsToSave);
 
     // Send push notifications if scheduled for now
     if (scheduleDate <= new Date()) {
-      // Get all users (not just those with push tokens) to save notifications in DB
-      const allUsers = await User.find({
-        _id: { $in: userIds },
-      }).select("pushToken _id pushNotificationsEnabled");
-
       let sentCount = 0;
       let savedToDbCount = 0;
 
@@ -845,12 +977,21 @@ const sendNotification = async (req, res, next) => {
           // Save notification to DB for all users
           savedToDbCount++;
 
+          logger.info(`Checking user ${user._id}: pushToken=${!!user.pushToken}, pushNotificationsEnabled=${user.pushNotificationsEnabled}`);
+
           // Only send push if user has token and notifications enabled
           if (user.pushToken && user.pushNotificationsEnabled) {
+            logger.info(`Sending push notification to user ${user._id}`);
+            
+            // Get personalized title and message for this user
+            const userDataForPush = await getUserDataForNotification(user._id.toString());
+            const personalizedTitle = replaceVariables(title, userDataForPush);
+            const personalizedMessage = replaceVariables(message, userDataForPush);
+
             const result = await pushNotificationService.sendPushNotification({
               to: user.pushToken,
-              title,
-              body: message,
+              title: personalizedTitle,
+              body: personalizedMessage,
               type: type || "general",
               userId: user._id || user.id,
               data: { type: type || "general", priority },
@@ -858,15 +999,26 @@ const sendNotification = async (req, res, next) => {
 
             if (result.success) {
               sentCount++;
+              logger.info(`Push notification sent successfully to user ${user._id}`);
+            } else {
+              logger.warn(`Push notification failed for user ${user._id}: ${result.error || result.skipped}`);
+            }
+          } else {
+            if (!user.pushToken) {
+              logger.warn(`User ${user._id} has no push token`);
+            }
+            if (!user.pushNotificationsEnabled) {
+              logger.warn(`User ${user._id} has push notifications disabled`);
             }
           }
         } catch (error) {
-          console.error(`Failed to send notification to user ${user._id}:`, error.message);
+          logger.error(`Failed to send notification to user ${user._id}: ${error.message}`, { error, stack: error.stack, userId: user._id });
         }
       }
 
       // Update response to include sent/saved counts
       return res.json({
+        success: true,
         ok: true,
         message: `Notification sent to ${sentCount} users, saved to DB for ${savedToDbCount} users`,
         notifications: savedNotifications,
@@ -877,12 +1029,15 @@ const sendNotification = async (req, res, next) => {
 
     // If scheduled for future, just return success
     res.json({
+      success: true,
       ok: true,
-      message: `Notification scheduled for ${userIds.length} users`,
+      message: `Notification scheduled for ${finalUserIds.length} users`,
       notifications: savedNotifications,
+      sentCount: 0,
+      savedToDbCount: finalUserIds.length,
     });
   } catch (error) {
-    console.error("sendNotification error:", error);
+    logger.error(`sendNotification error: ${error.message}`, { error, stack: error.stack, notificationData: req.body });
     const dbError = new Error(
       "Database error occurred while sending notification"
     );
@@ -944,6 +1099,19 @@ const broadcastNotification = async (req, res, next) => {
     // Send push notifications if scheduled for now
     if (scheduleDate <= new Date()) {
       const usersWithTokens = users.filter((user) => user.pushToken);
+      
+      logger.info(`Broadcast: Found ${users.length} users with pushNotificationsEnabled=true, ${usersWithTokens.length} users have push tokens, ${users.length - usersWithTokens.length} users missing push tokens`);
+
+      if (usersWithTokens.length === 0) {
+        logger.warn(`Broadcast: No users with push tokens found. Users have pushNotificationsEnabled=true but no tokens registered.`);
+        return res.json({
+          ok: true,
+          message: `Notification saved to DB for ${userIds.length} users, but no push tokens found to send push notifications`,
+          notifications: savedNotifications,
+          sentCount: 0,
+          savedToDbCount: userIds.length,
+        });
+      }
 
       const pushNotifications = usersWithTokens.map((user) => ({
         to: user.pushToken,
@@ -954,10 +1122,30 @@ const broadcastNotification = async (req, res, next) => {
         data: { type: type || "general", priority },
       }));
 
+      logger.info(`Broadcast: Attempting to send ${pushNotifications.length} push notifications`);
+
       if (pushNotifications.length > 0) {
-        await pushNotificationService.sendBulkPushNotifications(
+        const bulkResult = await pushNotificationService.sendBulkPushNotifications(
           pushNotifications
         );
+        
+        logger.info(`Broadcast result: ${JSON.stringify(bulkResult)}`);
+        
+        // Handle both old and new return format
+        const results = bulkResult.results || bulkResult;
+        const totalSent = (results.expo?.sent || 0) + (results.fcm?.sent || 0);
+        const totalFailed = (results.expo?.failed || 0) + (results.fcm?.failed || 0);
+        const totalSkipped = (results.expo?.skipped || 0) + (results.fcm?.skipped || 0);
+        
+        return res.json({
+          ok: true,
+          message: `Notification broadcasted: ${totalSent} sent, ${totalFailed} failed, ${totalSkipped} skipped, ${userIds.length} saved to DB`,
+          notifications: savedNotifications,
+          sentCount: totalSent,
+          failedCount: totalFailed,
+          skippedCount: totalSkipped,
+          savedToDbCount: userIds.length,
+        });
       }
     }
 
@@ -967,7 +1155,7 @@ const broadcastNotification = async (req, res, next) => {
       notifications: savedNotifications,
     });
   } catch (error) {
-    console.error("broadcastNotification error:", error);
+    logger.error(`broadcastNotification error: ${error.message}`, { error, stack: error.stack, notificationData: req.body });
     const dbError = new Error(
       "Database error occurred while broadcasting notification"
     );
@@ -1026,7 +1214,7 @@ const getSystemInfo = async (req, res, next) => {
       systemInfo,
     });
   } catch (error) {
-    console.error("getSystemInfo error:", error);
+    logger.error(`getSystemInfo error: ${error.message}`, { error, stack: error.stack });
     const dbError = new Error(
       "Database error occurred while fetching system info"
     );
@@ -1074,7 +1262,7 @@ const getAnalytics = async (req, res, next) => {
       analytics,
     });
   } catch (error) {
-    console.error("getAnalytics error:", error);
+    logger.error(`getAnalytics error: ${error.message}`, { error, stack: error.stack });
     const dbError = new Error(
       "Database error occurred while fetching analytics"
     );
@@ -1106,7 +1294,7 @@ const getUserAnalytics = async (req, res, next) => {
       userAnalytics,
     });
   } catch (error) {
-    console.error("getUserAnalytics error:", error);
+    logger.error(`getUserAnalytics error: ${error.message}`, { error, stack: error.stack });
     const dbError = new Error(
       "Database error occurred while fetching user analytics"
     );
@@ -1133,7 +1321,7 @@ const getContentAnalytics = async (req, res, next) => {
       contentAnalytics,
     });
   } catch (error) {
-    console.error("getContentAnalytics error:", error);
+    logger.error(`getContentAnalytics error: ${error.message}`, { error, stack: error.stack });
     const dbError = new Error(
       "Database error occurred while fetching content analytics"
     );
@@ -1161,10 +1349,136 @@ const getRevenueAnalytics = async (req, res, next) => {
       revenueAnalytics,
     });
   } catch (error) {
-    console.error("getRevenueAnalytics error:", error);
+    logger.error(`getRevenueAnalytics error: ${error.message}`, { error, stack: error.stack });
     const dbError = new Error(
       "Database error occurred while fetching revenue analytics"
     );
+    dbError.statusCode = 500;
+    return next(dbError);
+  }
+};
+
+// Get server logs
+const getServerLogs = async (req, res, next) => {
+  try {
+    const { date, limit = 100, level } = req.query;
+    const logsDir = path.join(__dirname, "..", "logs");
+
+    // Check if logs directory exists
+    let files = [];
+    try {
+      files = await fs.readdir(logsDir);
+    } catch (error) {
+      // Logs directory doesn't exist or can't be read
+      return res.json({
+        ok: true,
+        logs: [],
+        total: 0,
+        availableDates: [],
+        pagination: {
+          limit: parseInt(limit),
+          returned: 0,
+        },
+        message: "Logs directory not found or empty",
+      });
+    }
+    const logFiles = files
+      .filter((file) => file.endsWith("-error.log") || file.endsWith(".log"))
+      .sort()
+      .reverse(); // Most recent first
+
+    let allLogs = [];
+
+    // If date is specified, read that specific file
+    if (date) {
+      const logFile = path.join(logsDir, `${date}-error.log`);
+      try {
+        const content = await fs.readFile(logFile, "utf8");
+        const lines = content
+          .split("\n")
+          .filter((line) => line.trim())
+          .map((line, index) => {
+            // Parse log format: timestamp | LEVEL | message
+            const parts = line.split(" | ");
+            return {
+              id: `${date}-${index}`,
+              level: parts[1]?.toLowerCase() || "error",
+              message: parts.slice(2).join(" | ") || line,
+              timestamp: parts[0] || new Date().toISOString(),
+              date,
+            };
+          })
+          .filter((log) => !level || log.level === level.toLowerCase())
+          .reverse(); // Most recent first
+        allLogs = lines;
+      } catch (error) {
+        // File doesn't exist
+        allLogs = [];
+      }
+    } else {
+      // Read most recent log files (up to last 3 days)
+      for (const file of logFiles.slice(0, 3)) {
+        try {
+          const filePath = path.join(logsDir, file);
+          const content = await fs.readFile(filePath, "utf8");
+          const dateMatch = file.match(/(\d{4}-\d{2}-\d{2})/);
+          const fileDate = dateMatch ? dateMatch[1] : file;
+
+          const lines = content
+            .split("\n")
+            .filter((line) => line.trim())
+            .map((line, index) => {
+              const parts = line.split(" | ");
+              return {
+                id: `${fileDate}-${index}`,
+                level: parts[1]?.toLowerCase() || "error",
+                message: parts.slice(2).join(" | ") || line,
+                timestamp: parts[0] || new Date().toISOString(),
+                date: fileDate,
+              };
+            })
+            .filter((log) => !level || log.level === level.toLowerCase());
+
+          allLogs = [...allLogs, ...lines];
+        } catch (error) {
+          logger.error(`Error reading log file ${file}: ${error.message}`, { error, stack: error.stack, fileName: file });
+        }
+      }
+
+      // Sort by timestamp (most recent first)
+      allLogs.sort((a, b) => {
+        const dateA = new Date(a.timestamp);
+        const dateB = new Date(b.timestamp);
+        return dateB - dateA;
+      });
+    }
+
+    // Limit results
+    const limitedLogs = allLogs.slice(0, parseInt(limit));
+
+    // Get available log file dates
+    const availableDates = logFiles
+      .map((file) => {
+        const match = file.match(/(\d{4}-\d{2}-\d{2})/);
+        return match ? match[1] : null;
+      })
+      .filter((date) => date)
+      .sort()
+      .reverse();
+
+    res.json({
+      ok: true,
+      logs: limitedLogs,
+      total: allLogs.length,
+      availableDates,
+      pagination: {
+        limit: parseInt(limit),
+        returned: limitedLogs.length,
+      },
+    });
+  } catch (error) {
+    logger.error(`getServerLogs error: ${error.message}`, { error, stack: error.stack });
+    const dbError = new Error("Error reading server logs");
     dbError.statusCode = 500;
     return next(dbError);
   }
@@ -1191,4 +1505,5 @@ module.exports = {
   getUserAnalytics,
   getContentAnalytics,
   getRevenueAnalytics,
+  getServerLogs,
 };

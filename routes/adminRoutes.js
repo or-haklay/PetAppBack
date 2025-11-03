@@ -23,6 +23,7 @@ const {
   getUserAnalytics,
   getContentAnalytics,
   getRevenueAnalytics,
+  getServerLogs,
 } = require("../controllers/adminController");
 const {
   getAllNotificationSettings,
@@ -45,6 +46,15 @@ const {
   initializeTemplates,
   sendFromTemplate,
 } = require("../controllers/notificationTemplateController");
+const {
+  getAllAutomatedNotifications,
+  getAutomatedNotificationById,
+  createAutomatedNotification,
+  updateAutomatedNotification,
+  deleteAutomatedNotification,
+  toggleAutomatedNotification,
+  checkAutomatedNotification,
+} = require("../controllers/automatedNotificationController");
 
 // סטטיסטיקות
 router.get("/stats", authMW, adminMW, getStats);
@@ -92,8 +102,18 @@ router.put("/notifications/settings/:type", authMW, adminMW, updateNotificationS
 router.put("/notifications/settings/:type/toggle", authMW, adminMW, toggleNotificationSetting);
 router.post("/notifications/settings/initialize", authMW, adminMW, initializeSettings);
 
+// ניהול התראות קבועות (Automated Notifications)
+router.get("/notifications/automated", authMW, adminMW, getAllAutomatedNotifications);
+router.get("/notifications/automated/:id", authMW, adminMW, getAutomatedNotificationById);
+router.post("/notifications/automated", authMW, adminMW, createAutomatedNotification);
+router.put("/notifications/automated/:id", authMW, adminMW, updateAutomatedNotification);
+router.delete("/notifications/automated/:id", authMW, adminMW, deleteAutomatedNotification);
+router.post("/notifications/automated/:id/toggle", authMW, adminMW, toggleAutomatedNotification);
+router.post("/notifications/automated/:id/check", authMW, adminMW, checkAutomatedNotification);
+
 // מערכת וסטטיסטיקות
 router.get("/system/info", authMW, adminMW, getSystemInfo);
+router.get("/system/logs", authMW, adminMW, getServerLogs);
 router.get("/analytics", authMW, adminMW, getAnalytics);
 router.get("/analytics/users", authMW, adminMW, getUserAnalytics);
 router.get("/analytics/content", authMW, adminMW, getContentAnalytics);

@@ -11,7 +11,10 @@ const {
   scheduleEngagementNotifications,
   scheduleNotificationChecks,
 } = require("./utils/cron/engagementCron");
-const { initializeDefaultSettings } = require("./utils/notificationSettingsService");
+const {
+  scheduleAutomatedNotifications,
+  initializeDefaultAutomatedNotifications,
+} = require("./utils/cron/automatedNotifications");
 
 // Load environment variables
 const path = require("path");
@@ -37,7 +40,11 @@ if (!process.env.ADMIN_KEY) {
 }
 
 const app = express();
-app.use(cors());
+// CORS configuration - allow all origins for development
+app.use(cors({
+  origin: true, // Allow all origins
+  credentials: true,
+}));
 
 app.use(morgan("dev"));
 app.use(express.json());
@@ -207,12 +214,12 @@ mongoose
   .then(async () => {
     console.log("✅ Connected to MongoDB");
     
-    // Initialize default notification settings
+    // Initialize default automated notifications
     try {
-      await initializeDefaultSettings();
-      console.log("✅ Notification settings initialized");
+      await initializeDefaultAutomatedNotifications();
+      console.log("✅ Default automated notifications initialized");
     } catch (e) {
-      console.error("Failed to initialize notification settings:", e);
+      console.error("Failed to initialize default automated notifications:", e);
     }
     
     // Start cron jobs after DB is ready
@@ -226,14 +233,16 @@ mongoose
       scheduleEngagementNotifications();
       console.log("⏰ Engagement notifications scheduler started");
 
-      scheduleNotificationChecks();
-      console.log("⏰ Scheduled notifications checker started");
+      scheduleAutomatedNotifications();
+      console.log("⏰ Automated notifications scheduler started");
     } catch (e) {
       console.error("Failed to start schedulers:", e);
     }
     app.listen(PORT, "0.0.0.0", () => {
       console.log(`🚀 Server is running on port ${PORT}`);
       console.log(`🌐 Server accessible at: http://localhost:${PORT}`);
+      console.log(`🌐 Server also accessible at: http://192.168.1.141:${PORT}`);
+      console.log(`🌐 Server accessible on all network interfaces (0.0.0.0:${PORT})`);
     });
   })
   .catch((err) => {

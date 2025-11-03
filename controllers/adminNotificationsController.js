@@ -3,6 +3,7 @@ const { Pet } = require("../models/petModel");
 const ScheduledNotification = require("../models/ScheduledNotificationModel");
 const { Notification } = require("../models/NotificationModel");
 const pushService = require("../utils/pushNotificationService");
+const logger = require("../utils/logger");
 
 // שליחת התראה מיידית
 const sendImmediateNotification = async (req, res) => {
@@ -46,7 +47,7 @@ const sendImmediateNotification = async (req, res) => {
         });
         sentCount++;
       } catch (error) {
-        console.error(`Failed to send to user ${user._id}:`, error.message);
+        logger.error(`Failed to send to user ${user._id}: ${error.message}`, { error, stack: error.stack, userId: user._id });
       }
     }
 
@@ -56,7 +57,7 @@ const sendImmediateNotification = async (req, res) => {
       sentCount,
     });
   } catch (error) {
-    console.error("Error sending immediate notification:", error);
+    logger.error(`Error sending immediate notification: ${error.message}`, { error, stack: error.stack });
     res.status(500).json({ message: "שגיאה בשליחת התראה" });
   }
 };
@@ -240,7 +241,7 @@ const getNotificationHistory = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("Error getting notification history:", error);
+    logger.error(`Error getting notification history: ${error.message}`, { error, stack: error.stack });
     res.status(500).json({ message: "שגיאה בקבלת היסטוריית התראות" });
   }
 };
@@ -361,7 +362,7 @@ const createSampleNotifications = async (req, res, next) => {
       notifications: savedNotifications.length,
     });
   } catch (error) {
-    console.error("Error creating sample notifications:", error);
+    logger.error(`Error creating sample notifications: ${error.message}`, { error, stack: error.stack, count: req.body.count });
     const dbError = new Error("שגיאה ביצירת התראות לדוגמה");
     dbError.statusCode = 500;
     return next(dbError);

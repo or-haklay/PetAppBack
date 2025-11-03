@@ -2,6 +2,7 @@ const { ContentCategory, ContentArticle } = require("../models/contentModels");
 const { GamificationEvent } = require("../models/missionsModel");
 const { User } = require("../models/userModel");
 const mongoose = require("mongoose");
+const logger = require("../utils/logger");
 
 const DEFAULT_CATEGORIES = [
   { key: "medical", title: "רפואי", order: 1 },
@@ -26,7 +27,7 @@ exports.getCategories = async (req, res) => {
     if (cats && cats.length) return res.json({ ok: true, categories: cats });
     return res.json({ ok: true, categories: DEFAULT_CATEGORIES });
   } catch (e) {
-    console.error("getCategories error", e);
+    logger.error(`getCategories error: ${e.message}`, { error: e, stack: e.stack });
     return res.status(500).json({ ok: false, error: "categories_failed" });
   }
 };

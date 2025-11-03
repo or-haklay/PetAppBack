@@ -8,6 +8,7 @@ const {
   processWalkCompletion,
 } = require("../services/walkService");
 const Joi = require("joi");
+const logger = require("../utils/logger");
 
 // Create a new walk
 const createWalk = async (req, res, next) => {
@@ -133,7 +134,7 @@ const getPublicWalkById = async (req, res, next) => {
     
     // Validate ObjectId format
     if (!id || id.length !== 24 || !/^[0-9a-fA-F]{24}$/.test(id)) {
-      console.log("❌ [getPublicWalkById] Invalid ID format:", id);
+      logger.info("❌ [getPublicWalkById] Invalid ID format:", id);
       const error = new Error("Invalid walk ID format");
       error.statusCode = 400;
       return next(error);
@@ -148,7 +149,7 @@ const getPublicWalkById = async (req, res, next) => {
     ).lean(); // Use lean() for better performance and to avoid Mongoose errors
     
     if (!walk) {
-      console.log("❌ [getPublicWalkById] Walk not found or not shared:", id);
+      logger.info("❌ [getPublicWalkById] Walk not found or not shared:", id);
       const error = new Error("Walk not found or not shared");
       error.statusCode = 404;
       return next(error);
@@ -163,7 +164,7 @@ const getPublicWalkById = async (req, res, next) => {
     console.log("✅ [getPublicWalkById] Walk found:", walk._id);
     res.json(walk);
   } catch (error) {
-    console.error("❌ [getPublicWalkById] Error:", error);
+    logger.error("❌ [getPublicWalkById] Error:", error);
     // Handle CastError (invalid ObjectId)
     if (error.name === "CastError") {
       const castError = new Error("Invalid walk ID format");
@@ -185,7 +186,7 @@ const getWalksByPetId = async (req, res, next) => {
     // Prevent this route from catching /public/ requests
     // If petId is "public", it means this route incorrectly matched /public/:id
     if (petId === 'public' || (req.path && req.path.startsWith('/public/'))) {
-      console.log("⚠️ [getWalksByPetId] Route incorrectly matched /public/ request, passing to next");
+      logger.info("⚠️ [getWalksByPetId] Route incorrectly matched /public/ request, passing to next");
       return next();
     }
     

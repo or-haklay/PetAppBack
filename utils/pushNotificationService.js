@@ -218,10 +218,64 @@ class PushNotificationService {
         try {
           const ticketChunk = await this.expo.sendPushNotificationsAsync(chunk);
           tickets.push(...ticketChunk);
+          console.log(`📋 Expo tickets received:`, JSON.stringify(ticketChunk, null, 2));
         } catch (error) {
-          console.error("Error sending Expo push notification chunk:", error);
+          console.error("❌ Error sending Expo push notification chunk:", error);
         }
       }
+
+      // Check ticket status immediately to see if there are any errors
+      if (tickets.length > 0) {
+        const ticketIds = tickets
+          .map((ticket, index) => ticket.id || index)
+          .filter((id) => id !== undefined);
+        
+        if (ticketIds.length > 0) {
+          console.log(`📋 Checking ticket status for ${ticketIds.length} tickets...`);
+          try {
+            const receiptIds = tickets
+              .filter((ticket) => ticket.status === "ok" && ticket.id)
+              .map((ticket) => ticket.id);
+            
+            if (receiptIds.length > 0) {
+              // Wait a bit for Expo to process, then check receipts
+              setTimeout(async () => {
+                try {
+                  const receiptChunks = await this.expo.getPushNotificationReceiptsAsync(receiptIds);
+                  const receipts = Object.values(receiptChunks);
+                  receipts.forEach((receipt, index) => {
+                    if (receipt && receipt.status === "error") {
+                      console.error(`❌ Expo notification delivery failed:`, {
+                        error: receipt.message,
+                        errorCode: receipt.details?.error,
+                        ticketId: receiptIds[index],
+                      });
+                    } else if (receipt && receipt.status === "ok") {
+                      console.log(`✅ Expo notification delivered successfully (ticket: ${receiptIds[index]})`);
+                    }
+                  });
+                } catch (error) {
+                  console.error("❌ Error checking Expo notification receipts:", error.message);
+                }
+              }, 3000); // Wait 3 seconds before checking receipts
+            }
+          } catch (error) {
+            console.error("❌ Error processing ticket status:", error.message);
+          }
+        }
+      }
+
+      // Log any errors in tickets
+      tickets.forEach((ticket, index) => {
+        if (ticket.status === "error") {
+          console.error(`❌ Expo ticket error:`, {
+            error: ticket.message,
+            errorCode: ticket.details?.error,
+            details: ticket.details,
+            ticketIndex: index,
+          });
+        }
+      });
 
       console.log(`✅ Expo push notification sent to ${to}: ${title}`);
       return { success: true, tickets };
@@ -341,6 +395,7 @@ class PushNotificationService {
 
       // עדכון היסטוריית התראות אם השליחה הצליחה
       if (result.success && userId && type && type !== "general") {
+        console.log(`📊 Updating notification history for user ${userId}, type: ${type}`);
         try {
           const user = await User.findById(userId);
           if (user) {
@@ -382,6 +437,8 @@ class PushNotificationService {
   // שליחת התראות למספר משתמשים - תומך בשני סוגי tokens
   async sendBulkPushNotifications(notifications) {
     try {
+      console.log(`📤 Bulk push: Starting to send ${notifications.length} notifications...`);
+      
       const expoTokens = [];
       const fcmTokens = [];
       const invalidTokens = [];
@@ -394,8 +451,11 @@ class PushNotificationService {
           fcmTokens.push(notification);
         } else {
           invalidTokens.push(notification);
+          console.warn(`⚠️ Invalid token format: ${notification.to.substring(0, 30)}...`);
         }
       }
+
+      console.log(`📤 Bulk push: ${expoTokens.length} Expo tokens, ${fcmTokens.length} FCM tokens, ${invalidTokens.length} invalid tokens`);
 
       if (invalidTokens.length > 0) {
         console.warn(`⚠️ Found ${invalidTokens.length} invalid push tokens`);
@@ -408,19 +468,37 @@ class PushNotificationService {
 
       // שליחת Expo tokens - צריך לבדוק כל אחד בנפרד בגלל תדירות
       if (expoTokens.length > 0) {
+        console.log(`📤 Bulk push: Sending ${expoTokens.length} Expo notifications...`);
         for (const notification of expoTokens) {
           try {
+            console.log(`📤 Sending Expo notification to ${notification.to.substring(0, 30)}... (userId: ${notification.userId})`);
             // Use sendPushNotification to check settings and frequency
             const result = await this.sendPushNotification(notification);
+            
+            // Check if tickets have errors (even if result.success is true)
+            if (result.tickets && result.tickets.length > 0) {
+              const hasErrors = result.tickets.some(ticket => ticket.status === "error");
+              if (hasErrors) {
+                const errorTicket = result.tickets.find(ticket => ticket.status === "error");
+                results.expo.failed++;
+                console.error(`❌ Expo notification failed (ticket error): ${errorTicket.message}`);
+                console.error(`❌ Error details:`, errorTicket.details);
+                continue;
+              }
+            }
+            
             if (result.success) {
               results.expo.sent++;
+              console.log(`✅ Expo notification sent successfully to ${notification.to.substring(0, 30)}...`);
             } else if (result.skipped) {
               results.expo.skipped++;
+              console.log(`⏸️ Expo notification skipped: ${result.error}`);
             } else {
               results.expo.failed++;
+              console.error(`❌ Expo notification failed: ${result.error}`);
             }
           } catch (error) {
-            console.error("Error sending Expo notification:", error);
+            console.error(`❌ Error sending Expo notification to ${notification.to.substring(0, 30)}...:`, error.message);
             results.expo.failed++;
           }
         }
@@ -428,19 +506,24 @@ class PushNotificationService {
 
       // שליחת FCM tokens - צריך לבדוק כל אחד בנפרד בגלל תדירות
       if (fcmTokens.length > 0) {
+        console.log(`📤 Bulk push: Sending ${fcmTokens.length} FCM notifications...`);
         for (const notification of fcmTokens) {
           try {
+            console.log(`📤 Sending FCM notification to ${notification.to.substring(0, 30)}... (userId: ${notification.userId})`);
             // Use sendPushNotification to check settings and frequency
             const result = await this.sendPushNotification(notification);
             if (result.success) {
               results.fcm.sent++;
+              console.log(`✅ FCM notification sent successfully to ${notification.to.substring(0, 30)}...`);
             } else if (result.skipped) {
               results.fcm.skipped++;
+              console.log(`⏸️ FCM notification skipped: ${result.error}`);
             } else {
               results.fcm.failed++;
+              console.error(`❌ FCM notification failed: ${result.error}`);
             }
           } catch (error) {
-            console.error("Error sending FCM notification:", error);
+            console.error(`❌ Error sending FCM notification to ${notification.to.substring(0, 30)}...:`, error.message);
             results.fcm.failed++;
           }
         }
@@ -449,17 +532,15 @@ class PushNotificationService {
       const totalSent = results.expo.sent + results.fcm.sent;
       const totalFailed = results.expo.failed + results.fcm.failed;
       const totalSkipped = results.expo.skipped + results.fcm.skipped;
-
+      
       console.log(
-        `📱 Sent ${totalSent} push notifications (Expo: ${results.expo.sent}, FCM: ${results.fcm.sent})${totalSkipped > 0 ? `, Skipped: ${totalSkipped}` : ""}`
+        `📊 Bulk push completed: Total - ${totalSent} sent, ${totalFailed} failed, ${totalSkipped} skipped`
+      );
+      console.log(
+        `📊 Bulk push details: Expo - ${results.expo.sent} sent, ${results.expo.failed} failed, ${results.expo.skipped} skipped | FCM - ${results.fcm.sent} sent, ${results.fcm.failed} failed, ${results.fcm.skipped} skipped`
       );
 
-      return {
-        success: totalSent > 0,
-        results,
-        invalidTokens: invalidTokens.length,
-        skipped: totalSkipped,
-      };
+      return results;
     } catch (error) {
       console.error("❌ Error sending bulk push notifications:", error.message);
       return { success: false, error: error.message };

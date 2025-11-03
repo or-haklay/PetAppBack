@@ -10,6 +10,7 @@ const {
   changePasswordSchema,
   registerWithSocialSchema,
 } = require("../models/userModel");
+const logger = require("../utils/logger");
 
 const getAllUsers = async (req, res, next) => {
   try {
@@ -182,7 +183,7 @@ const createUser = async (req, res, next) => {
       ]),
     });
   } catch (error) {
-    console.error("Error saving user:", error);
+    logger.error(`Error saving user: ${error.message}`, { error, stack: error.stack, userData: _.pick(req.body, ['email', 'name']) });
     const dbError = new Error("Database error occurred while creating user");
     dbError.statusCode = 500;
     return next(dbError);
@@ -247,7 +248,7 @@ const loginUser = async (req, res, next) => {
       ]),
     });
   } catch (error) {
-    console.error("Error during user login:", error);
+    logger.error(`Error during user login: ${error.message}`, { error, stack: error.stack, email: req.body.email });
     const dbError = new Error("Database error occurred during user login");
     dbError.statusCode = 500;
     return next(dbError);
@@ -290,7 +291,7 @@ const updateUser = async (req, res, next) => {
     // response
     res.send({ message: "User updated", user: updatedUser });
   } catch (error) {
-    console.error("Error updating user:", error);
+    logger.error(`Error updating user (updateUser): ${error.message}`, { error, stack: error.stack, userId: req.params.id });
     const dbError = new Error("Database error occurred while updating user");
     dbError.statusCode = 500;
     return next(dbError);
@@ -317,7 +318,7 @@ const deleteUser = async (req, res, next) => {
     // response
     res.send({ message: `User with ID ${userId} deleted` });
   } catch (error) {
-    console.error("Error deleting user:", error);
+    logger.error(`Error deleting user: ${error.message}`, { error, stack: error.stack, userId: req.params.id });
     const dbError = new Error("Database error occurred while deleting user");
     dbError.statusCode = 500;
     return next(dbError);
@@ -375,7 +376,7 @@ const getCurrentUser = async (req, res, next) => {
       ]),
     });
   } catch (error) {
-    console.error("Error fetching current user:", error);
+    logger.error(`Error fetching current user: ${error.message}`, { error, stack: error.stack, userId: req.user?._id });
     const dbError = new Error("Database error occurred while fetching user");
     dbError.statusCode = 500;
     return next(dbError);
@@ -449,7 +450,7 @@ const updateMe = async (req, res, next) => {
       ]),
     });
   } catch (error) {
-    console.error("Error updating user:", error);
+    logger.error(`Error updating user (updateMe): ${error.message}`, { error, stack: error.stack, userId: req.user?._id });
     const dbError = new Error("Database error occurred while updating user");
     dbError.statusCode = 500;
     return next(dbError);
@@ -494,7 +495,7 @@ const changePassword = async (req, res, next) => {
 
     res.send({ message: "Password changed successfully" });
   } catch (error) {
-    console.error("Error changing password:", error);
+    logger.error(`Error changing password: ${error.message}`, { error, stack: error.stack, userId: req.user?._id });
     const dbError = new Error(
       "Database error occurred while changing password"
     );
@@ -572,15 +573,18 @@ const updatePushToken = async (req, res, next) => {
   try {
     const { pushToken, pushNotificationsEnabled } = req.body;
 
+    // אם pushToken הוא null או undefined, נמחק את ה-token (המשתמש לא נתן הרשאה)
+    const updateData = {
+      pushToken: pushToken || null, // אם null, נמחק את ה-token
+      pushNotificationsEnabled:
+        pushNotificationsEnabled !== undefined
+          ? pushNotificationsEnabled
+          : pushToken ? true : false, // אם אין token, false
+    };
+
     const updatedUser = await User.findByIdAndUpdate(
       req.user._id,
-      {
-        pushToken,
-        pushNotificationsEnabled:
-          pushNotificationsEnabled !== undefined
-            ? pushNotificationsEnabled
-            : true,
-      },
+      updateData,
       { new: true }
     );
 
@@ -591,7 +595,9 @@ const updatePushToken = async (req, res, next) => {
     }
 
     res.status(200).json({
-      message: "Push token updated successfully",
+      message: pushToken 
+        ? "Push token updated successfully" 
+        : "Push token removed successfully",
       user: {
         pushToken: updatedUser.pushToken,
         pushNotificationsEnabled: updatedUser.pushNotificationsEnabled,
@@ -612,7 +618,7 @@ const updateLastActivity = async (req, res) => {
     );
     res.json({ success: true });
   } catch (error) {
-    console.error("Error updating activity:", error);
+    logger.error(`Error updating activity: ${error.message}`, { error, stack: error.stack, userId: req.user?._id });
     res.status(500).json({ message: "שגיאה בעדכון פעילות" });
   }
 };
@@ -648,7 +654,7 @@ const getSocialConnections = async (req, res, next) => {
 
     res.json(connections);
   } catch (error) {
-    console.error("Error getting social connections:", error);
+    logger.error(`Error getting social connections: ${error.message}`, { error, stack: error.stack, userId: req.user?._id });
     const dbError = new Error("Failed to get social connections");
     dbError.statusCode = 500;
     return next(dbError);
